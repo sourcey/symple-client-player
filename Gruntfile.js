@@ -6,25 +6,25 @@ module.exports = function (grunt) {
                 src: [
                     'src/*.css'
                 ],
-                dest: 'dist/symple.css'
+                dest: 'dist/symple.player.css'
             },
             js: {
                 src: [
                     'src/*.js'
                 ],
-                dest: 'dist/symple.js'
+                dest: 'dist/symple.player.js'
             }
         },
         cssmin: {
             css: {
-                src: 'dist/symple.css',
-                dest: 'dist/symple.min.css'
+                src: 'dist/symple.player.css',
+                dest: 'dist/symple.player.min.css'
             }
         },
         uglify: {
             js: {
                 files: {
-                    'dist/symple.min.js': ['dist/symple.js']
+                    'dist/symple.player.min.js': ['dist/symple.player.js']
                 }
             }
         },
