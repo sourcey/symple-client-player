@@ -1,18 +1,18 @@
 /*
-    Layout 
+    Simple Player CSS
 
     Layering is in the following order from bottom to top:
     screen, status, message, loading, controls
 */
 
-.symple-player-screen {    
-    /* position: relative; cannot be absolute as the player resizes with the screen 
+.symple-player-screen {
+    /* position: relative; cannot be absolute as the player resizes with the screen
     width: 100%;
     height: 100%; */
     text-align: center;
     margin: 0 auto; /* center the screen when fixed width */
     z-index: 0;
-    
+
     position: absolute;
     top: 0;
     left: 0;
@@ -50,7 +50,7 @@
     top: 0;
     left: 0;
     right: 0;
-    bottom: 0; 
+    bottom: 0;
     z-index: 3;
 }
 
@@ -67,16 +67,17 @@
 .symple-player-screen video,
 .symple-player-screen object,
 .symple-player-screen embed,
-.symple-player-screen img {  
+.symple-player-screen img {
     /* height: 100%; 0 height unless absolute */
     /* width: 100%; skewed images */
     width: 100%;
-    min-height: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 
-/* 
-    Style 
+/*
+    Style
 */
 
 .symple-player {
@@ -94,8 +95,8 @@
 }
 
 
-/* 
-    States 
+/*
+    States
     none, loading, loading, playing, paused, stopped, error
 */
 

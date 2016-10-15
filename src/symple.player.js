@@ -93,7 +93,7 @@ Symple.Media = {
     // Rescales video dimensions maintaining perspective
     // TODO: Different aspect ratios
     rescaleVideo: function(srcW, srcH, maxW, maxH) {
-        //Symple.log('Symple Player: Rescale Video: ', srcW, srcH, maxW, maxH);
+        //Symple.log('symple:player: Rescale Video: ', srcW, srcH, maxW, maxH);
         var maxRatio = maxW / maxH;
         var srcRatio = 1.33; //srcW / srcH;
         if (srcRatio < maxRatio) {
@@ -256,7 +256,7 @@ Symple.Player = Symple.Class.extend({
     // Player Controls
     //
     play: function(params) {
-        Symple.log('Symple Player: Play: ', params)
+        Symple.log('symple:player: Play: ', params)
         try {
             if (!this.engine)
                 this.setup();
@@ -277,7 +277,7 @@ Symple.Player = Symple.Class.extend({
     },
 
     stop: function() {
-        Symple.log('Symple Player: Stop')
+        Symple.log('symple:player: Stop')
         if (this.state != 'stopped') {
             if (this.engine)
                 this.engine.stop(); // engine updates state to stopped
@@ -301,7 +301,7 @@ Symple.Player = Symple.Class.extend({
     },
 
     setState: function(state, message) {
-        Symple.log('Symple Player: Set state:', this.state, '=>', state);
+        Symple.log('symple:player: Set state:', this.state, '=>', state);
         if (this.state == state)
             return;
 
@@ -328,7 +328,7 @@ Symple.Player = Symple.Class.extend({
     // Display an overlayed player message
     // error, warning, info
     displayMessage: function(type, message) {
-        Symple.log('Symple Player: Display message:', type, message)
+        Symple.log('symple:player: Display message:', type, message)
         if (message) {
             this.message.html('<p class="' + type + '-message">' + message + '</p>').show();
         }

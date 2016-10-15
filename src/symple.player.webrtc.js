@@ -1,78 +1,64 @@
 // -----------------------------------------------------------------------------
 // WebRTC Engine
 //
+
 window.RTCPeerConnection = window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
 window.RTCSessionDescription = window.mozRTCSessionDescription || window.RTCSessionDescription;
 window.RTCIceCandidate = window.mozRTCIceCandidate || window.RTCIceCandidate;
-navigator.getUserMedia = navigator.getUserMedia ||
-    navigator.webkitGetUserMedia ||
-    navigator.mozGetUserMedia ||
-    navigator.msGetUserMedia;
 window.URL = window.webkitURL || window.URL;
+navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
 
 
 Symple.Media.registerEngine({
     id: 'WebRTC',
     name: 'WebRTC Player',
-    formats: 'VP8, Opus',
+    formats: 'VP8, VP9, Opus',
     preference: 100,
     support: (function() {
-        return typeof RTCPeerConnection != "undefined";
+        return typeof RTCPeerConnection != 'undefined';
     })()
 });
 
 
 Symple.Player.Engine.WebRTC = Symple.Player.Engine.extend({
     init: function(player) {
-        Symple.log("SympleWebRTC: Init");
+        Symple.log('symple:player:webrtc: init');
         this._super(player);
 
         this.rtcConfig = player.options.rtcConfig || {
-          iceServers: [
-            { url: "stun:stun.l.google.com:19302" }
-          ]
+            iceServers: [
+                { url: 'stun:stun.l.google.com:19302' }
+            ]
         }
         this.rtcOptions = player.options.rtcOptions || {
             optional: [
-                {DtlsSrtpKeyAgreement: true} // FF <=> Chrome interop
+                { DtlsSrtpKeyAgreement: true } // required for FF <=> Chrome interop
             ]
         }
         this.mediaConstraints = player.options.mediaConstraints || {}
-        //this.mediaConstraints = player.options.mediaConstraints || {
-        //  'mandatory': {
-        //    'OfferToReceiveAudio':true,
-        //    'OfferToReceiveVideo':true
-        //  }
-        //};
     },
 
     setup: function() {
-        Symple.log("SympleWebRTC: Setup");
+        Symple.log('symple:player:webrtc: setup');
 
         this._createPeerConnection();
 
-        // Note: Absolutely position video element so it scales to
-        // the parent element size. Need to test in other browsers.
-
         if (typeof(this.video) == 'undefined') {
-            this.video = document.createElement("video");
+            this.video = document.createElement('video');
             this.video.autoplay = true;
             this.player.screen.prepend(this.video);
+            alert('creating')
         }
-
-        //this.video = $('<video width="100%" height="100%" style="position:absolute;left:0;top:0;"></video>'); // Chrome
-        //this.selfVideo = typeof(this.selfVideo) == 'undefined' ? $('<video></video>') : this.selfVideo;
-        //this.video = typeof(this.video) == 'undefined' ? $('<video></video>') : this.video; // style="position:absolute;left:0;top:0;"  width="100%" height="100%"  style="max-width:100%;height:auto;"
     },
 
     destroy: function() {
-        Symple.log("SympleWebRTC: Destroy");
+        Symple.log('symple:player:webrtc: destroy');
+
         this.sendLocalSDP = null;
         this.sendLocalCandidate = null;
 
         if (this.video) {
-            this.video[0].src = '';
-            this.video[0] = null;
+            this.video.src = '';
             this.video = null;
             // Anything else required for video cleanup?
         }
@@ -85,56 +71,42 @@ Symple.Player.Engine.WebRTC = Symple.Player.Engine.extend({
     },
 
     play: function(params) {
-        Symple.log("SympleWebRTC: Play", params);
+        Symple.log('symple:player:webrtc: play', params);
 
-        // The 'playing' state will be set when candidates
-        // gathering is complete.
-        // TODO: Get state events from the video element
-        // to shift from local loading to playing state.
+        // NOTE: The 'playing' state will only be set when candidate gathering
+        // is complete.
 
+        // if `params.localMedia` is set then display the local video stream.
         if (params && params.localMedia) {
-
-            // Get the local stream, show it in the local video element and send it
             var self = this;
+
+            // TODO: Support device enumeration.
+            // Add a Webcam module for this and accept an input stream.
             navigator.getUserMedia({ audio: !params.disableAudio, video: !params.disableVideo },
+                function (localStream) { // success
 
-                // successCallback
-                function (localStream) {
+                    Symple.log('symple:player:webrtc: webcam playing');
 
-                    //self._createPeerConnection();
-
-                    // Play the local stream
-                    self.video[0].src = URL.createObjectURL(localStream);
+                    // Play the local video stream and create the SDP offer.
+                    self.video.src = URL.createObjectURL(localStream);
                     self.pc.addStream(localStream);
-
-                    //if (params.caller)
-                        self.pc.createOffer(
-                            function(desc) { self._onLocalSDP(desc); });
-                    //else
-                    //    self.pc.createAnswer(
-                    //        function(desc) { self._onLocalSDP(desc); },
-                    //        function() { // error
-                    //            self.setError("Cannot create local SDP answer");
-                    //        },
-                    //        null //this.mediaConstraints;
-                    //    )
-
-                    //function gotDescription(desc) {
-                    //    pc.setLocalDescription(desc);
-                    //    signalingChannel.send(JSON.stringify({ "sdp": desc }));
-                    //}
+                    self.pc.createOffer(
+                        function(desc) {
+                          self._onLocalSDP(desc);
+                        },
+                        function(err) { // error
+                            self.setError('createOffer() Failed: ' + err);
+                        });
                 },
-
-                // errorCallback
-                function(err) {
-                    self.setError("getUserMedia() Failed: " + err);
+                function(err) { // error
+                    self.setError('getUserMedia() Failed: ' + err);
                 });
         }
     },
 
     stop: function() {
         if (this.video) {
-            this.video[0].src = '';
+            this.video.src = '';
             // Do not nullify
         }
 
@@ -150,139 +122,118 @@ Symple.Player.Engine.WebRTC = Symple.Player.Engine.extend({
     mute: function(flag) {
         // Mute unless explicit false given
         flag = flag === false ? false : true;
-        Symple.log("SympleWebRTC: Mute:", flag);
 
-        if (this.video) {
-            this.video.prop('muted', flag); //mute
-        }
+        Symple.log('symple:player:webrtc: mute:', flag);
+
+        if (this.video)
+            this.video.prop('muted', flag);
     },
 
-    // Initiates the player with local media capture
-    //startLocalMedia: function(params) {
-        //Symple.log("SympleWebRTC: Play", params);
-
-        // The 'playing' state will be set when candidates
-        // gathering is complete.
-        // TODO: Get state events from the video element
-        // to shift from local loading to playing state.
-    //},
-
-    //
     // Called when local SDP is ready to be sent to the peer.
     sendLocalSDP: new Function,
 
-    //
     // Called when a local candidate is ready to be sent to the peer.
     sendLocalCandidate: new Function,
 
-    //
     // Called when remote SDP is received from the peer.
-    onRemoteSDP: function(desc) {
-        Symple.log('SympleWebRTC: Recieve remote SDP:', desc)
+    recvRemoteSDP: function(desc) {
+        Symple.log('symple:player:webrtc: recv remote sdp:', desc)
         if (!desc || !desc.type || !desc.sdp)
-            throw "Invalid SDP data"
+            throw 'Invalid remote SDP';
 
-        //if (desc.type != "offer")
-        //    throw "Only SDP offers are supported"
+        // if (desc.type != 'offer')
+        //    throw 'Only SDP offers are supported'
 
         var self = this;
         this.pc.setRemoteDescription(new RTCSessionDescription(desc),
             function() {
-                Symple.log('SympleWebRTC: SDP success');
-                //alert('success')
+                Symple.log('symple:player:webrtc: sdp success');
             },
             function(message) {
-                console.error('SympleWebRTC: SDP error:', message);
-                self.setError("Cannot parse remote SDP offer");
+                console.error('symple:player:webrtc: sdp error:', message);
+                self.setError('Cannot parse remote SDP offer');
             }
         );
 
-        if (desc.type == "offer") {
-            this.pc.createAnswer(
+        if (desc.type == 'offer') {
+            self.pc.createAnswer(
                 function(answer) { // success
                     self._onLocalSDP(answer);
-                    //alert('answer')
                 },
                 function() { // error
-                    self.setError("Cannot create local SDP answer");
+                    self.setError('Cannot create local SDP answer');
                 },
-                null //this.mediaConstraints
+                null // this.mediaConstraints
             );
         }
     },
 
-    //
     // Called when remote candidate is received from the peer.
-    onRemoteCandidate: function(candidate) {
-        //Symple.log("SympleWebRTC: Recieve remote candiate ", candidate);
+    recvRemoteCandidate: function(candidate) {
+        Symple.log('symple:player:webrtc: recv remote candiate ', candidate);
         if (!this.pc)
-            throw 'The peer connection is not initialized' // call onRemoteSDP first
+            throw 'The peer connection is not initialized'; // call recvRemoteSDP first
 
-        this.pc.addIceCandidate(new RTCIceCandidate({
-            //sdpMid: candidate.sdpMid,
-            sdpMLineIndex: candidate.sdpMLineIndex,
-            candidate: candidate.candidate
-        }));
+        this.pc.addIceCandidate(new RTCIceCandidate(candidate));
     },
-
 
     //
     // Private methods
     //
 
-    //
-    // Called when local SDP is received from the peer.
+    // Called when local SDP is ready to be sent to the peer.
     _onLocalSDP: function(desc) {
         try {
             this.pc.setLocalDescription(desc);
             this.sendLocalSDP(desc);
         }
         catch (e) {
-            Symple.log("Failed to send local SDP:", e);
+            Symple.log('Failed to send local SDP:', e);
         }
     },
 
+    // Create the RTCPeerConnection object.
     _createPeerConnection: function() {
         if (this.pc)
-            throw 'The peer connection is already initialized'
+            throw 'The peer connection is already initialized';
 
-        Symple.log("SympleWebRTC: Creating peer connection: ", this.rtcConfig);
+        Symple.log('symple:player:webrtc: create RTCPeerConnnection with config: ',
+            JSON.stringify(this.rtcConfig), JSON.stringify(this.rtcOptions));
 
         var self = this;
         this.pc = new RTCPeerConnection(this.rtcConfig, this.rtcOptions);
         this.pc.onicecandidate = function(event) {
             if (event.candidate) {
-                //Symple.log("SympleWebRTC: Local candidate gathered:", event.candidate);
+                Symple.log('symple:player:webrtc: local candidate gathered:', event.candidate);
                 self.sendLocalCandidate(event.candidate);
             }
             else {
-                Symple.log("SympleWebRTC: Local candidate gathering complete");
+                Symple.log('symple:player:webrtc: local candidate gathering complete');
             }
         };
         this.pc.onaddstream = function(event) {
-            Symple.log("SympleWebRTC: Remote stream added:", URL.createObjectURL(event.stream));
+            Symple.log('symple:player:webrtc: remote stream added');
 
             // Set the state to playing once candidates have completed gathering.
             // This is the best we can do until ICE onstatechange is implemented.
             self.setState('playing');
 
-            self.video[0].src = URL.createObjectURL(event.stream);
-            self.video[0].play();
+            self.video.src = URL.createObjectURL(event.stream);
+            self.video.play();
         };
         this.pc.onremovestream = function(event) {
-            Symple.log("SympleWebRTC: Remote stream removed:", event);
-            self.video[0].stop();
+            Symple.log('symple:player:webrtc: remote stream removed:', event);
+            self.video.stop();
+            self.video.src = '';
         };
 
-        // Note: The following state events are completely unreliable.
-        // Hopefully when the spec is complete this will change, but
-        // until then we need to "guess" the state.
-        //this.pc.onconnecting = function(event) { Symple.log("SympleWebRTC: onconnecting:", event); };
-        //this.pc.onopen = function(event) { Symple.log("SympleWebRTC: onopen:", event); };
-        //this.pc.onicechange = function(event) { Symple.log("SympleWebRTC: onicechange :", event); };
-        //this.pc.onstatechange = function(event) { Symple.log("SympleWebRTC: onstatechange :", event); };
-
-        Symple.log("SympleWebRTC: Setupd RTCPeerConnnection with config: ", JSON.stringify(this.rtcConfig));
+        // NOTE: The following state events are still very unreliable.
+        // Hopefully when the spec is complete this will change, but until then
+        // we need to 'guess' the state.
+        // this.pc.onconnecting = function(event) { Symple.log('symple:player:webrtc: onconnecting:', event); };
+        // this.pc.onopen = function(event) { Symple.log('symple:player:webrtc: onopen:', event); };
+        // this.pc.onicechange = function(event) { Symple.log('symple:player:webrtc: onicechange :', event); };
+        // this.pc.onstatechange = function(event) { Symple.log('symple:player:webrtc: onstatechange :', event); };
     }
 });
 
@@ -291,11 +242,11 @@ Symple.Player.Engine.WebRTC = Symple.Player.Engine.extend({
 // Helpers
 
 Symple.Media.iceCandidateType = function(candidateSDP) {
-  if (candidateSDP.indexOf("typ relay") != -1)
-    return "turn";
-  if (candidateSDP.indexOf("typ srflx") != -1)
-    return "stun";
-  if (candidateSDP.indexOf("typ host") != -1)
-    return "host";
-  return "unknown";
+    if (candidateSDP.indexOf('typ relay') != -1)
+        return 'turn';
+    if (candidateSDP.indexOf('typ srflx') != -1)
+        return 'stun';
+    if (candidateSDP.indexOf('typ host') != -1)
+        return 'host';
+    return 'unknown';
 }

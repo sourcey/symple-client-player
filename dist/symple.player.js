@@ -193,45 +193,45 @@ Symple.Player.Engine.Flash = Symple.Player.Engine.extend({
 });
 Symple.Media = {
     engines: {}, // Object containing references for candidate selection
-    
+
     registerEngine: function(engine) {
         Symple.log('Register media engine: ', engine)
         if (!engine.name || typeof engine.preference == 'undefined' || typeof engine.support == 'undefined') {
             Symple.log('Cannot register invalid engine: ', engine)
             return false;
-        }   
+        }
         this.engines[engine.id] = engine;
         return true;
     },
-    
+
     hasEngine: function(id) {
         return typeof this.engines[id] == 'object';
     },
-    
+
     // Checks support for a given engine
     supportsEngine: function(id) {
         // Check support for engine
         return !!(this.hasEngine(id) && this.engines[id].support);
     },
-    
+
     // Checks support for a given format
     supportsFormat: function(format) {
         // Check support for engine
         return !!preferredEngine(format);
     },
-    
+
     // Returns a list of compatible engines sorted by preference
-    // The optional format argument further filters by engines 
+    // The optional format argument further filters by engines
     // which don't support the given media format.
-    compatibleEngines: function(format) {          
+    compatibleEngines: function(format) {
         var arr = [], engine;
         // Reject non supported or disabled
-        for (var item in this.engines) {   
+        for (var item in this.engines) {
             engine = this.engines[item];
-            if (engine.preference == 0) 
+            if (engine.preference == 0)
                 continue;
-            Symple.log('Symple Media: Supported: ', engine.name, engine.support)            
-            if (engine.support == true)        
+            Symple.log('Symple Media: Supported: ', engine.name, engine.support)
+            if (engine.support == true)
                 arr.push(engine)
         }
         // Sort by preference
@@ -241,15 +241,15 @@ Symple.Media = {
         });
         return arr
     },
-    
+
     // Returns the highest preference compatible engine
-    // The optional format argument further filters by engines 
+    // The optional format argument further filters by engines
     // which don't support the given media format.
-    preferredCompatibleEngine: function(format) {    
-        var arr = this.compatibleEngines(format), engine;  
+    preferredCompatibleEngine: function(format) {
+        var arr = this.compatibleEngines(format), engine;
         engine = arr.length ? arr[0] : null;
         Symple.log('Symple Media: Preferred Engine: ', engine);
-        return engine; 
+        return engine;
     },
 
     // Returns the optimal video resolution for the current device
@@ -267,26 +267,26 @@ Symple.Media = {
         var height = width * 0.75;
         return [width, height];
     },
-    
-    buildURL: function(params) { 
-        var query = [], url, addr = params.address;       
-        url = addr.scheme + '://' + addr.host + ':' + addr.port + (addr.uri ? addr.uri : '/');                     
+
+    buildURL: function(params) {
+        var query = [], url, addr = params.address;
+        url = addr.scheme + '://' + addr.host + ':' + addr.port + (addr.uri ? addr.uri : '/');
         for (var p in params) {
-            if (p == 'address') 
+            if (p == 'address')
                 continue;
             query.push(encodeURIComponent(p) + "=" + encodeURIComponent(params[p]));
         }
         query.push('rand=' + Math.random());
         url += '?';
-        url += query.join("&");  
+        url += query.join("&");
         return url;
-        
+
     },
-    
+
     // Rescales video dimensions maintaining perspective
     // TODO: Different aspect ratios
     rescaleVideo: function(srcW, srcH, maxW, maxH) {
-        //Symple.log('Symple Player: Rescale Video: ', srcW, srcH, maxW, maxH);
+        //Symple.log('symple:player: Rescale Video: ', srcW, srcH, maxW, maxH);
         var maxRatio = maxW / maxH;
         var srcRatio = 1.33; //srcW / srcH;
         if (srcRatio < maxRatio) {
@@ -298,8 +298,8 @@ Symple.Media = {
         }
         return [srcW, srcH];
     },
-        
-    // Basic checking for ICE style streaming candidates
+
+    // Basic checking for remote ICE style streaming candidates
     // TODO: Latency checks and best candidate switching
     checkCandidate: function(url, fn) {
         Symple.log('Symple Media: Checking candidate: ', url);
@@ -315,7 +315,7 @@ Symple.Media = {
         }
 
         xhr.onreadystatechange = function() {
-            //Symple.log('Symple Media: Candidate state', xhr.readyState, xhr.status);
+            // Symple.log('Symple Media: Candidate state', xhr.readyState, xhr.status);
 
             if (xhr.readyState == 2) {
                 if (fn) {
@@ -347,27 +347,23 @@ Symple.Media = {
 //  Symple Player
 //
 //  Online video streaming for everyone
-//  Requires JQuery
+//  Requires jQuery
 //
 Symple.Player = Symple.Class.extend({
     init: function(options) {
         // TODO: Use our own options extend
-        this.options = $.extend({ //Symple.extend({
+        this.options = Symple.extend({ //$.extend({ //
+            format:         'MJPEG',      // The media format to use (MJPEG, FLV, Speex, ...)
+            engine:         undefined,    // Engine class name, can be specified or auto detected
+
             htmlRoot:       '/javascripts/symple',
             element:        '.symple-player:first',
-            
-            format:         'MJPEG',      // The media format to use (MJPEG, FLV, Speex, ...)
-            engine:         undefined,    // Engine class name, can be specified or auto detected 
-            
-            //screenWidth:    '100%',       // player screen css width (percentage or pixel value)
-            //screenHeight:   '100%',       // player screen css height (percentage or pixel value)
-            //showStatus:     false,
-            //assertSupport:  false,        // throws an exception if no browser support for given engine
+            fullscreenElement: undefined,
 
             // Callbacks
             onCommand:       function(player, cmd) { },
             onStateChange:   function(player, state) { },
-            
+
             // Markup
             template: '\
             <div class="symple-player">\
@@ -391,17 +387,17 @@ Symple.Player = Symple.Class.extend({
         }
         if (!this.element.length)
             throw 'Player element not found';
-        
+
         this.screen = this.element.find('.symple-player-screen');
         if (!this.screen.length)
             throw 'Player screen element not found';
-        
+
         // Depreciated: Screen is always 100% unless speified otherwise via CSS
         //if (this.options.screenWidth)
         //    this.screen.width(this.options.screenWidth);
         //if (this.options.screenHeight)
         //    this.screen.height(this.options.screenHeight);
-            
+
         this.message = this.element.find('.symple-player-message')
         if (!this.message.length)
             throw 'Player message element not found';
@@ -416,7 +412,7 @@ Symple.Player = Symple.Class.extend({
         this.bindEvents();
         this.playing = false;
 
-        Symple.log(this.options.template)
+        // Symple.log(this.options.template)
 
         //this.setState('stopped');
         //var self = this;
@@ -427,37 +423,37 @@ Symple.Player = Symple.Class.extend({
 
     setup: function() {
         var id = this.options.engine;
-        
+
         // Ensure the engine is configured
         if (!id)
-            throw "Streaming engine not configured. Please set 'options.engine'";  
-        
+            throw "Streaming engine not configured. Please set 'options.engine'";
+
         // Ensure the engine exists
         if (!Symple.Media.hasEngine(id))
-            throw "Streaming engine not available: " + id;                          
+            throw "Streaming engine not available: " + id;
         if (typeof Symple.Player.Engine[id] == 'undefined')
-            throw "Streaming engine not found: " + id;       
-            
-        // Ensure the engine is supported  
-        if (!Symple.Media.supportsEngine(id))     
-            throw "Streaming engine not supported: " + id;   
-                 
-        // Instantiate the engine          
+            throw "Streaming engine not found: " + id;
+
+        // Ensure the engine is supported
+        if (!Symple.Media.supportsEngine(id))
+            throw "Streaming engine not supported: " + id;
+
+        // Instantiate the engine
         this.engine = new Symple.Player.Engine[id](this);
-        this.engine.setup();  
-        
-        this.element.addClass('engine-' + id.toLowerCase())    
+        this.engine.setup();
+
+        this.element.addClass('engine-' + id.toLowerCase())
     },
-    
+
     //
     // Player Controls
     //
     play: function(params) {
-        Symple.log('Symple Player: Play: ', params)
-        try {    
+        Symple.log('symple:player: Play: ', params)
+        try {
             if (!this.engine)
                 this.setup();
-        
+
             if (this.state != 'playing' //&&
                 // The player may be set to loading state by the
                 // outside application before play is called.
@@ -467,14 +463,14 @@ Symple.Player = Symple.Class.extend({
                 this.engine.play(params); // engine updates state to playing
             }
         } catch (e) {
-            this.setState('error');      
+            this.setState('error');
             this.displayMessage('error', e)
             throw e;
-        } 
+        }
     },
 
     stop: function() {
-        Symple.log('Symple Player: Stop')
+        Symple.log('symple:player: Stop')
         if (this.state != 'stopped') {
             if (this.engine)
                 this.engine.stop(); // engine updates state to stopped
@@ -487,11 +483,21 @@ Symple.Player = Symple.Class.extend({
         this.element.remove();
     },
 
+    mute: function(flag) {
+        flag = !!flag;
+        Symple.log('SympleWebcam: Mute:', flag);
+
+        if (this.engine &&
+            this.engine.mute)
+            this.engine.mute(flag);
+        this.element[flag ? 'addClass' : 'removeClass']('muted');
+    },
+
     setState: function(state, message) {
-        Symple.log('Symple Player: Set state:', this.state, '=>', state, message)
+        Symple.log('symple:player: Set state:', this.state, '=>', state);
         if (this.state == state)
             return;
-        
+
         this.state = state;
         this.displayStatus(null);
         this.playing = state == 'playing';
@@ -515,7 +521,7 @@ Symple.Player = Symple.Class.extend({
     // Display an overlayed player message
     // error, warning, info
     displayMessage: function(type, message) {
-        Symple.log('Symple Player: Display message:', type, message)
+        Symple.log('symple:player: Display message:', type, message)
         if (message) {
             this.message.html('<p class="' + type + '-message">' + message + '</p>').show();
         }
@@ -545,6 +551,12 @@ Symple.Player = Symple.Class.extend({
               case 'stop':
                   this.stop();
                   break;
+              case 'mute':
+                  this.mute(true);
+                  break;
+              case 'unmute':
+                  this.mute(false);
+                  break;
               case 'fullscreen':
                   this.toggleFullScreen();
                   break;
@@ -555,14 +567,23 @@ Symple.Player = Symple.Class.extend({
     getButton: function(cmd) {
         return this.element.find('.symple-player-controls [rel="' + cmd + '"]');
     },
-    
+
     // TODO: Toggle actual player element
-    toggleFullScreen: function() {  
-        if (Symple.runVendorMethod(document, "FullScreen") || Symple.runVendorMethod(document, "IsFullScreen")) {
+    toggleFullScreen: function() {
+        // if (!document.fullscreenElement) {
+        //     document.documentElement.requestFullscreen();
+        // } else {
+        //     if (document.exitFullscreen) {
+        //         document.exitFullscreen();
+        //     }
+        // }
+        var fullscreenElement = $(this.options.fullscreenElement)[0] || this.element[0];
+        if (Symple.runVendorMethod(document, "FullScreen") ||
+            Symple.runVendorMethod(document, "IsFullScreen")) {
             Symple.runVendorMethod(document, "CancelFullScreen");
         }
         else {
-            Symple.runVendorMethod(this.element[0], "RequestFullScreen");
+            Symple.runVendorMethod(fullscreenElement, "RequestFullScreen");
         }
     }
 })
@@ -573,7 +594,7 @@ Symple.Player = Symple.Class.extend({
 //
 Symple.Player.Engine = Symple.Class.extend({
     init: function(player) {
-        this.player = player;        
+        this.player = player;
         this.fps = 0;
         this.seq = 0;
     },
@@ -581,7 +602,7 @@ Symple.Player.Engine = Symple.Class.extend({
     support: function() { return true; },
     setup: function() {},
     destroy: function() {},
-    play: function(params) { 
+    play: function(params) {
         this.params = params || {};
         if (!this.params.url && typeof(params.address) == 'object')
             this.params.url = this.buildURL();
@@ -594,12 +615,12 @@ Symple.Player.Engine = Symple.Class.extend({
     setState: function(state, message) {
         this.player.setState(state, message);
     },
-    
+
     setError: function(error) {
         Symple.log('Symple Player Engine: Error:', error);
         this.setState('error', error);
     },
-    
+
     onRemoteCandidate: function(candidate) {
         Symple.log('Symple Player Engine: Remote candidates not supported.');
     },
@@ -615,159 +636,21 @@ Symple.Player.Engine = Symple.Class.extend({
         }
         this.seq++;
     },
-    
+
     displayFPS: function() {
-        this.updateFPS()
+        this.updateFPS();
         this.player.displayStatus(this.delta + " ms (" + this.fps + " fps)");
     },
-    
-    buildURL: function() {    
+
+    buildURL: function() {
         if (!this.params)
-            throw 'Streaming parameters not set'
+            throw 'Streaming parameters not set';
         if (!this.params.address)
             this.params.address = this.player.options.address;
         return Symple.Media.buildURL(this.params);
     }
 });
 
-
-
-
-    /*
-    refresh: function() {
-        if (this.engine)
-            this.engine.refresh();
-    },
-
-    refresh: function() {
-        var css = { position: 'relative' };
-        if (this.options.screenWidth == '100%' ||
-            this.options.screenHeight == '100%') {
-            var size = this.rescaleVideo(this.screen.outerWidth(), this.screen.outerHeight(),
-                this.element.outerWidth(), this.element.outerHeight());
-            css.width = size[0];
-            css.height = size[1];
-            css.left = this.element.outerWidth() / 2 - css.width / 2;
-            css.top = this.element.outerHeight() / 2 - css.height / 2;
-            css.left = css.left ? css.left : 0;
-            css.top = css.top ? css.top : 0;
-            if (this.engine)
-                this.engine.resize(css.width, css.height);
-        }
-        else {
-            css.width = this.options.screenWidth;
-            css.height = this.options.screenHeight;
-            css.left = this.element.outerWidth() / 2 - this.options.screenWidth / 2;
-            css.top = this.element.outerHeight() / 2 - this.options.screenHeight / 2;
-            css.left = css.left ? css.left : 0;
-            css.top = css.top ? css.top : 0;
-        }
-        Symple.log('Symple Player: Setting Size: ', css);
-
-        this.screen.css(css);
-
-        //var e = this.element.find('#player-screen');
-          //Symple.log('refresh: scaled:', size)
-          Symple.log('refresh: screenWidth:', this.options.screenWidth)
-          Symple.log('refresh: width:', this.screen.width())
-          Symple.log('refresh: screenHeight:', this.options.screenHeight)
-          Symple.log('refresh: height:', this.screen.height())
-          Symple.log('refresh: css:', css)
-    },
-     
-    getBestEngineForFormat: function(format) {
-        var ua = navigator.userAgent;
-        var isMobile = Symple.isMobileDevice();
-        var engine = null;
-        
-        // TODO: Use this function with care as it is not complete.      
-        // TODO: Register engines which we can iterate to check support.
-        // Please feel free to update this function with your test results!  
-        
-        //
-        // MJPEG
-        //
-        if (format == "MJPEG") {
-
-            
-            // Most versions of Safari has great MJPEG support.
-            // BUG: The MJPEG socket is not closed until the page is refreshed.
-            if (ua.match(/(Safari|iPhone|iPod|iPad)/)) {
-                
-                // iOS 6 breaks native MJPEG support.
-                if (Symple.iOSVersion() > 6)
-                    engine = 'MJPEGBase64MXHR';
-                else
-                    engine = 'MJPEG';
-            }
-
-            // Firefox to the rescue! Nag user's to install firefox if MJPEG
-            // streaming is unavailable.
-            else if(ua.match(/(Mozilla)/))
-                engine = 'MJPEG';
-
-            // Android's WebKit has disabled multipart HTTP requests for some
-            // reason: http://code.google.com/p/android/issues/detail?id=301
-            else if(ua.match(/(Android)/))
-                engine = 'MJPEGBase64MXHR';
-
-            // BlackBerry doesn't understand multipart/x-mixed-replace ... duh
-            else if(ua.match(/(BlackBerry)/))
-                engine = 'PseudoMJPEG';
-
-            // Opera does not support mjpeg MJPEG, but their home grown image
-            // processing library is super fast so pseudo streaming is nearly
-            // as fast as other native MJPEG implementations!
-            else if(ua.match(/(Opera)/))
-                engine = isMobile ? 'MJPEGBase64MXHR' : 'Flash'; //PseudoMJPEG
-
-            // Internet Explorer... nuff said
-            else if(ua.match(/(MSIE)/))
-                engine = isMobile ? 'PseudoMJPEG' : 'Flash';
-
-            // Display a nag screen to install a real browser if we are in
-            // pseudo streaming mode.
-            if (engine == 'PseudoMJPEG') { //!forcePseudo &&
-                this.displayMessage('warning',
-                    'Your browser does not support native streaming so playback preformance will be severely limited. ' +
-                    'For the best streaming experience please <a href="http://www.mozilla.org/en-US/firefox/">download Firefox</a> .');
-             }
-        }
-         
-         
-        //
-        // FLV
-        //
-        else if (format == "FLV") {
-            if (Symple.isMobileDevice())
-                throw 'FLV not supported on mobile devices.'
-            engine = 'Flash';                
-        }
-        
-        else 
-            throw 'Unknown media format: ' + format
-        
-        return engine;
-        if (!document.fullscreenElement &&    // alternative standard method
-            !document.mozFullScreenElement && !document.webkitFullscreenElement) {  // current working methods
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen();
-            } else if (document.documentElement.mozRequestFullScreen) {
-                document.documentElement.mozRequestFullScreen();
-            } else if (document.documentElement.webkitRequestFullscreen) {
-                document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-            }
-        } 
-        else {
-            if (document.cancelFullScreen) {
-                document.cancelFullScreen();
-            } else if (document.mozCancelFullScreen) {
-                document.mozCancelFullScreen();
-            } else if (document.webkitCancelFullScreen) {
-                document.webkitCancelFullScreen();
-            }
-        }
-        */
 Symple.Media.BrowserCompatabilityMsg = '\
     <br>Download the latest version <a href="www.google.com/chrome/">Chrome</a> or \
     <a href="http://www.apple.com/safari/">Safari</a> to view this video stream.'
@@ -1572,288 +1455,365 @@ Symple.Player.Engine.PseudoMJPEG = Symple.Player.Engine.extend({
 //img.width = this.player.options.screenWidth;
 //img.height = this.player.options.screenHeight;
 // -----------------------------------------------------------------------------
+// Webcam Engine
+//
+navigator.getUserMedia = navigator.getUserMedia ||
+    navigator.webkitGetUserMedia ||
+    navigator.mozGetUserMedia ||
+    navigator.msGetUserMedia;
+window.URL = window.webkitURL || window.URL;
+
+
+Symple.Media.registerEngine({
+    id: 'Webcam',
+    name: 'Webcam Player',
+    // formats: 'VP8, Opus',
+    preference: 0,
+    support: (function() {
+        return typeof navigator.getUserMedia != 'undefined';
+    })()
+});
+
+
+Symple.Player.Engine.Webcam = Symple.Player.Engine.extend({
+    init: function(player) {
+        Symple.log('SympleWebcam: Init');
+
+        this._super(player);
+    },
+
+    setup: function() {
+        Symple.log('SympleWebcam: Setup');
+
+        if (typeof(this.video) == 'undefined') {
+            this.video = document.createElement('video');
+            this.video.autoplay = true;
+            this.player.screen.prepend(this.video);
+        }
+    },
+
+    destroy: function() {
+        Symple.log('SympleWebcam: Destroy');
+
+        if (this.video) {
+            this.video.src = '';
+            this.video = null;
+            // Anything else required for video cleanup?
+        }
+
+        if (this.localStream) {
+
+            // localStream.stop() is deprecated in Chrome 45, removed in Chrome 47
+            if (!this.localStream.stop && this.localStream.getTracks) {
+                this.localStream.stop = function(){
+                    this.getTracks().forEach(function(track) {
+                       track.stop();
+                    });
+                };
+            }
+            this.localStream.stop();
+            this.localStream = null;
+        }
+    },
+
+    play: function(params) {
+        Symple.log('SympleWebcam: Play', params);
+
+        var self = this;
+        navigator.getUserMedia({ audio: params.audio, video: params.video },
+            function(localStream) {
+                self.video.src = URL.createObjectURL(localStream);
+                self.localStream = localStream;
+
+                // TODO: better handle errors
+                self.setState('playing');
+            },
+            function(err) {
+                self.setError('getUserMedia() Failed: ' + err);
+            });
+    },
+
+    stop: function() {
+        if (this.video) {
+            this.video.src = '';
+            // Do not nullify
+        }
+
+        this.setState('stopped');
+    },
+
+    mute: function(flag) {
+        if (this.video) {
+            this.video.muted = flag;
+        }
+    },
+
+    capture: function(scaleFactor) {
+        if (!scaleFactor) scaleFactor = 1;
+        var w = this.video.videoWidth * scaleFactor;
+        var h = this.video.videoHeight * scaleFactor;
+        var canvas = document.createElement('canvas');
+            canvas.width  = w;
+            canvas.height = h;
+        var ctx = canvas.getContext('2d');
+            ctx.drawImage(this.video, 0, 0, w, h);
+        return canvas;
+    },
+
+    toBlob: function(mimeType, quality, scaleFactor) {
+        mimeType = mimeType || 'image/jpeg';
+        quality = quality || 0.75;
+        var dataURL = this.capture(scaleFactor).toDataURL(mimeType, quality);
+        return this._dataURItoBlob(dataURL, mimeType);
+    },
+
+    _dataURItoBlob: function(dataURI, mimeType) {
+        var byteString = atob(dataURI.split(',')[1]);
+        var ab = new ArrayBuffer(byteString.length);
+        var ia = new Uint8Array(ab);
+        for (var i = 0; i < byteString.length; i++) {
+            ia[i] = byteString.charCodeAt(i);
+        }
+        return new Blob([ab], { type: mimeType });
+    }
+});
+
+// -----------------------------------------------------------------------------
 // WebRTC Engine
 //
+
 window.RTCPeerConnection = window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
 window.RTCSessionDescription = window.mozRTCSessionDescription || window.RTCSessionDescription;
 window.RTCIceCandidate = window.mozRTCIceCandidate || window.RTCIceCandidate;
-navigator.getUserMedia = navigator.mozGetUserMedia || navigator.webkitGetUserMedia;
 window.URL = window.webkitURL || window.URL;
+navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia;
 
-   
+
 Symple.Media.registerEngine({
     id: 'WebRTC',
     name: 'WebRTC Player',
-    formats: 'VP8, Opus', 
+    formats: 'VP8, VP9, Opus',
     preference: 100,
     support: (function() {
-        return typeof RTCPeerConnection != "undefined";
+        return typeof RTCPeerConnection != 'undefined';
     })()
 });
 
 
 Symple.Player.Engine.WebRTC = Symple.Player.Engine.extend({
     init: function(player) {
-        Symple.log("SympleWebRTC: Init");
+        Symple.log('symple:player:webrtc: init');
         this._super(player);
-        
+
         this.rtcConfig = player.options.rtcConfig || {
-          iceServers: [
-            { url: "stun:stun.l.google.com:19302" }
-          ]
+            iceServers: [
+                { url: 'stun:stun.l.google.com:19302' }
+            ]
         }
         this.rtcOptions = player.options.rtcOptions || {
             optional: [
-                {DtlsSrtpKeyAgreement: true} // FF <=> Chrome interop
+                { DtlsSrtpKeyAgreement: true } // required for FF <=> Chrome interop
             ]
         }
         this.mediaConstraints = player.options.mediaConstraints || {}
-        //this.mediaConstraints = player.options.mediaConstraints || {
-        //  'mandatory': {
-        //    'OfferToReceiveAudio':true, 
-        //    'OfferToReceiveVideo':true
-        //  }
-        //};
     },
-    
+
     setup: function() {
-        Symple.log("SympleWebRTC: Setup");
-        
-        this._createPeerConnection(); 
-        
-        // Note: Absolutely position video element so it scales to  
-        // the parent element size. Need to test in other browsers.        
-        
+        Symple.log('symple:player:webrtc: setup');
+
+        this._createPeerConnection();
+
         if (typeof(this.video) == 'undefined') {
-            Symple.log("SympleWebRTC: Setup: Peer video");
-            this.video = $('<video autoplay></video>')
-            this.player.screen.prepend(this.video);    
+            this.video = document.createElement('video');
+            this.video.autoplay = true;
+            this.player.screen.prepend(this.video);
+            alert('creating')
         }
-        
-        //this.video = $('<video width="100%" height="100%" style="position:absolute;left:0;top:0;"></video>'); // Chrome
-        //this.selfVideo = typeof(this.selfVideo) == 'undefined' ? $('<video></video>') : this.selfVideo;
-        //this.video = typeof(this.video) == 'undefined' ? $('<video></video>') : this.video; // style="position:absolute;left:0;top:0;"  width="100%" height="100%"  style="max-width:100%;height:auto;"
     },
-      
-    destroy: function() {   
-        Symple.log("SympleWebRTC: Destroy");
+
+    destroy: function() {
+        Symple.log('symple:player:webrtc: destroy');
+
         this.sendLocalSDP = null;
         this.sendLocalCandidate = null;
-        
+
         if (this.video) {
-            this.video[0].src = '';
-            this.video[0] = null;
+            this.video.src = '';
             this.video = null;
             // Anything else required for video cleanup?
         }
-                
+
         if (this.pc) {
             this.pc.close();
             this.pc = null;
             // Anything else required for peer connection cleanup?
-        }        
+        }
     },
 
-    play: function(params) {        
-        Symple.log("SympleWebRTC: Play", params);
-        
-        // The 'playing' state will be set when candidates
-        // gathering is complete.
-        // TODO: Get state events from the video element 
-        // to shift from local loading to playing state.       
-        
+    play: function(params) {
+        Symple.log('symple:player:webrtc: play', params);
+
+        // NOTE: The 'playing' state will only be set when candidate gathering
+        // is complete.
+
+        // if `params.localMedia` is set then display the local video stream.
         if (params && params.localMedia) {
-          
-            // Get the local stream, show it in the local video element and send it
-            var self = this;  
-            navigator.getUserMedia({ audio: !params.disableAudio, video: !params.disableVideo }, 
-            
-                // successCallback
-                function (localStream) {              
-                    
-                    //self._createPeerConnection(); 
-                        
-                    // Play the local stream
-                    self.video[0].src = URL.createObjectURL(localStream);
+            var self = this;
+
+            // TODO: Support device enumeration.
+            // Add a Webcam module for this and accept an input stream.
+            navigator.getUserMedia({ audio: !params.disableAudio, video: !params.disableVideo },
+                function (localStream) { // success
+
+                    Symple.log('symple:player:webrtc: webcam playing');
+
+                    // Play the local video stream and create the SDP offer.
+                    self.video.src = URL.createObjectURL(localStream);
                     self.pc.addStream(localStream);
-
-                    //if (params.caller)
-                        self.pc.createOffer(
-                            function(desc) { self._onLocalSDP(desc); });
-                    //else
-                    //    self.pc.createAnswer(
-                    //        function(desc) { self._onLocalSDP(desc); },
-                    //        function() { // error
-                    //            self.setError("Cannot create local SDP answer");
-                    //        },
-                    //        null //this.mediaConstraints;
-                    //    )
-
-                    //function gotDescription(desc) {
-                    //    pc.setLocalDescription(desc);
-                    //    signalingChannel.send(JSON.stringify({ "sdp": desc }));
-                    //}
+                    self.pc.createOffer(
+                        function(desc) {
+                          self._onLocalSDP(desc);
+                        },
+                        function(err) { // error
+                            self.setError('createOffer() Failed: ' + err);
+                        });
                 },
-
-                // errorCallback
-                function(err) {
-                    self.setError("getUserMedia() Failed: " + err);
+                function(err) { // error
+                    self.setError('getUserMedia() Failed: ' + err);
                 });
         }
     },
 
     stop: function() {
-        
         if (this.video) {
-            this.video[0].src = '';
+            this.video.src = '';
             // Do not nullify
         }
-                
+
         // TODO: Close peer connection?
         if (this.pc) {
             this.pc.close();
             this.pc = null;
         }
-            
+
         this.setState('stopped');
     },
-    
+
     mute: function(flag) {
         // Mute unless explicit false given
         flag = flag === false ? false : true;
-        Symple.log("SympleWebRTC: Mute:", flag);
-        
-        if (this.video) {
-            this.video.prop('muted', flag); //mute
-        } 
+
+        Symple.log('symple:player:webrtc: mute:', flag);
+
+        if (this.video)
+            this.video.prop('muted', flag);
     },
 
-    // Initiates the player with local media capture
-    //startLocalMedia: function(params) {        
-        //Symple.log("SympleWebRTC: Play", params);
-        
-        // The 'playing' state will be set when candidates
-        // gathering is complete.
-        // TODO: Get state events from the video element 
-        // to shift from local loading to playing state.        
-    //},
-    
-    //
     // Called when local SDP is ready to be sent to the peer.
     sendLocalSDP: new Function,
-    
-    //
-    // Called when a local candidate is ready to be sent to the peer.    
-    sendLocalCandidate: new Function,    
-    
-    //
+
+    // Called when a local candidate is ready to be sent to the peer.
+    sendLocalCandidate: new Function,
+
     // Called when remote SDP is received from the peer.
-    onRemoteSDP: function(desc) {   
-        Symple.log('SympleWebRTC: Recieve remote SDP:', desc)        
+    recvRemoteSDP: function(desc) {
+        Symple.log('symple:player:webrtc: recv remote sdp:', desc)
         if (!desc || !desc.type || !desc.sdp)
-            throw "Invalid SDP data"
-                    
-        //if (desc.type != "offer")
-        //    throw "Only SDP offers are supported"
-        
-        var self = this;             
-        this.pc.setRemoteDescription(new RTCSessionDescription(desc), 
+            throw 'Invalid remote SDP';
+
+        // if (desc.type != 'offer')
+        //    throw 'Only SDP offers are supported'
+
+        var self = this;
+        this.pc.setRemoteDescription(new RTCSessionDescription(desc),
             function() {
-                Symple.log('SympleWebRTC: SDP success');
-                //alert('success')
-            }, 
+                Symple.log('symple:player:webrtc: sdp success');
+            },
             function(message) {
-                console.error('SympleWebRTC: SDP error:', message);
-                self.setError("Cannot parse remote SDP offer");
+                console.error('symple:player:webrtc: sdp error:', message);
+                self.setError('Cannot parse remote SDP offer');
             }
-        );   
-            
-        if (desc.type == "offer") {
-            this.pc.createAnswer(
+        );
+
+        if (desc.type == 'offer') {
+            self.pc.createAnswer(
                 function(answer) { // success
-                    self._onLocalSDP(answer);                    
-                    //alert('answer')
+                    self._onLocalSDP(answer);
                 },
                 function() { // error
-                    self.setError("Cannot create local SDP answer");
+                    self.setError('Cannot create local SDP answer');
                 },
-                null //this.mediaConstraints
+                null // this.mediaConstraints
             );
         }
-    },    
-    
-    //
+    },
+
     // Called when remote candidate is received from the peer.
-    onRemoteCandidate: function(candidate) { 
-        //Symple.log("SympleWebRTC: Recieve remote candiate ", candidate);
+    recvRemoteCandidate: function(candidate) {
+        Symple.log('symple:player:webrtc: recv remote candiate ', candidate);
         if (!this.pc)
-            throw 'The peer connection is not initialized' // call onRemoteSDP first
-            
-        this.pc.addIceCandidate(new RTCIceCandidate({
-            //sdpMid: candidate.sdpMid, 
-            sdpMLineIndex: candidate.sdpMLineIndex, 
-            candidate: candidate.candidate
-        }));      
-    },   
-    
-    
+            throw 'The peer connection is not initialized'; // call recvRemoteSDP first
+
+        this.pc.addIceCandidate(new RTCIceCandidate(candidate));
+    },
+
     //
     // Private methods
     //
 
-    //
-    // Called when local SDP is received from the peer.
-    _onLocalSDP: function(desc) {       
+    // Called when local SDP is ready to be sent to the peer.
+    _onLocalSDP: function(desc) {
         try {
             this.pc.setLocalDescription(desc);
             this.sendLocalSDP(desc);
-        } 
-        catch (e) {
-            Symple.log("Failed to send local SDP:", e);            
         }
-    }, 
-    
-    _createPeerConnection: function() {          
+        catch (e) {
+            Symple.log('Failed to send local SDP:', e);
+        }
+    },
+
+    // Create the RTCPeerConnection object.
+    _createPeerConnection: function() {
         if (this.pc)
-            throw 'The peer connection is already initialized'
-              
-        Symple.log("SympleWebRTC: Creating peer connection: ", this.rtcConfig);
-                
+            throw 'The peer connection is already initialized';
+
+        Symple.log('symple:player:webrtc: create RTCPeerConnnection with config: ',
+            JSON.stringify(this.rtcConfig), JSON.stringify(this.rtcOptions));
+
         var self = this;
         this.pc = new RTCPeerConnection(this.rtcConfig, this.rtcOptions);
         this.pc.onicecandidate = function(event) {
             if (event.candidate) {
-                //Symple.log("SympleWebRTC: Local candidate gathered:", event.candidate);                
-                self.sendLocalCandidate(event.candidate); 
-            } 
+                Symple.log('symple:player:webrtc: local candidate gathered:', event.candidate);
+                self.sendLocalCandidate(event.candidate);
+            }
             else {
-                Symple.log("SympleWebRTC: Local candidate gathering complete");
+                Symple.log('symple:player:webrtc: local candidate gathering complete');
             }
         };
-        this.pc.onaddstream = function(event) {         
-            Symple.log("SympleWebRTC: Remote stream added:", URL.createObjectURL(event.stream));
-                
+        this.pc.onaddstream = function(event) {
+            Symple.log('symple:player:webrtc: remote stream added');
+
             // Set the state to playing once candidates have completed gathering.
             // This is the best we can do until ICE onstatechange is implemented.
             self.setState('playing');
-                
-            self.video[0].src = URL.createObjectURL(event.stream);
-            self.video[0].play(); 
+
+            self.video.src = URL.createObjectURL(event.stream);
+            self.video.play();
         };
-        this.pc.onremovestream = function(event) { 
-            Symple.log("SympleWebRTC: Remote stream removed:", event);
-            self.video[0].stop(); 
+        this.pc.onremovestream = function(event) {
+            Symple.log('symple:player:webrtc: remote stream removed:', event);
+            self.video.stop();
+            self.video.src = '';
         };
-        
-        // Note: The following state events are completely unreliable.
-        // Hopefully when the spec is complete this will change, but
-        // until then we need to "guess" the state.
-        //this.pc.onconnecting = function(event) { Symple.log("SympleWebRTC: onconnecting:", event); };
-        //this.pc.onopen = function(event) { Symple.log("SympleWebRTC: onopen:", event); };
-        //this.pc.onicechange = function(event) { Symple.log("SympleWebRTC: onicechange :", event); };
-        //this.pc.onstatechange = function(event) { Symple.log("SympleWebRTC: onstatechange :", event); };
-        
-        Symple.log("SympleWebRTC: Setupd RTCPeerConnnection with config: " + JSON.stringify(this.rtcConfig));
+
+        // NOTE: The following state events are still very unreliable.
+        // Hopefully when the spec is complete this will change, but until then
+        // we need to 'guess' the state.
+        // this.pc.onconnecting = function(event) { Symple.log('symple:player:webrtc: onconnecting:', event); };
+        // this.pc.onopen = function(event) { Symple.log('symple:player:webrtc: onopen:', event); };
+        // this.pc.onicechange = function(event) { Symple.log('symple:player:webrtc: onicechange :', event); };
+        // this.pc.onstatechange = function(event) { Symple.log('symple:player:webrtc: onstatechange :', event); };
     }
 });
 
@@ -1862,11 +1822,11 @@ Symple.Player.Engine.WebRTC = Symple.Player.Engine.extend({
 // Helpers
 
 Symple.Media.iceCandidateType = function(candidateSDP) {
-  if (candidateSDP.indexOf("typ relay") != -1)
-    return "turn";
-  if (candidateSDP.indexOf("typ srflx") != -1)
-    return "stun";
-  if (candidateSDP.indexOf("typ host") != -1)
-    return "host";
-  return "unknown";
+    if (candidateSDP.indexOf('typ relay') != -1)
+        return 'turn';
+    if (candidateSDP.indexOf('typ srflx') != -1)
+        return 'stun';
+    if (candidateSDP.indexOf('typ host') != -1)
+        return 'host';
+    return 'unknown';
 }
