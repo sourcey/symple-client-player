@@ -47,7 +47,6 @@ Symple.Player.Engine.WebRTC = Symple.Player.Engine.extend({
             this.video = document.createElement('video');
             this.video.autoplay = true;
             this.player.screen.prepend(this.video);
-            alert('creating')
         }
     },
 
