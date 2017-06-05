@@ -1,6 +1,6 @@
 {
   "name": "symple-client-player",
-  "version": "0.9.5",
+  "version": "0.9.6",
   "description": "Symple realtime media player",
   "dependencies": {
   },
