@@ -219,7 +219,7 @@
     }
   }
 })(window.Symple = window.Symple || {})
-
+;
 //
 // Symple.WebRTC.js
 // WebRTC Player Engine for Symple

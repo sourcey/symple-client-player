@@ -9,6 +9,9 @@ module.exports = function (grunt) {
                 dest: 'dist/symple.player.css'
             },
             js: {
+                options: {
+                  separator: ';\n',
+                },
                 src: [
                     // NOTE: Only WebRTC engine is included in the default build
                     'src/symple.player.js',
