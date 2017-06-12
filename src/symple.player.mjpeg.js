@@ -1,734 +1,243 @@
 //
 // Symple.MJPEG.js
-// Media Engine for the Symple Messaging Client
+// MJPEG Engine for the Symple
 //
 // Copyright (c)2010 Sourcey
 // http://sourcey.com
 // Distributed under The MIT License.
 //
-(function(S) {
-    S.Media.BrowserCompatabilityMsg = '\
+(function (S) {
+  S.Media.BrowserCompatabilityMsg = '\
         <br>Download the latest version <a href="www.google.com/chrome/">Chrome</a> or \
         <a href="http://www.apple.com/safari/">Safari</a> to view this video stream.'
 
-    // -------------------------------------------------------------------------
-    // Native MJPEG Engine
-    //
-    // - Works in Firefox, Chrome and Safari except iOS >= 6.
-    //
-    S.Media.registerEngine({
-        id: 'MJPEG',
-        name: 'MJPEG Native',
-        formats: 'MJPEG',
-        preference: 60,
-        defaults: {
-            framing: 'multipart'
-        },
-        support: (function() {
-            var ua = navigator.userAgent;
-            var iOS = S.iOSVersion();
-            return !!(ua.match(/(Firefox|Chrome)/) ||
+  // Native MJPEG Engine
+  //
+  // - Works in Firefox, Chrome and Safari except iOS >= 6.
+  //
+  S.PlayerFactory.register({
+    id: 'mjpeg:native',
+    name: 'MJPEG Native',
+    formats: 'MJPEG',
+    preference: 60,
+    defaults: {
+      framing: 'multipart'
+    },
+    support: (function () {
+      var ua = navigator.userAgent
+      var iOS = S.iOSVersion()
+      return !!(ua.match(/(Firefox|Chrome)/) ||
                 // iOS < 6 or desktop safari
-                (iOS ? iOS < 6 : ua.match(/(Safari)/)));
-        })()
-    });
+                (iOS ? iOS < 6 : ua.match(/(Safari)/)))
+    })()
+  })
 
-    S.Player.Engine.MJPEG = S.Player.Engine.extend({
-        init: function(player) {
-            this._super(player);
-            this.img = null;
-        },
+  S.Player.Engine.MJPEG = S.Player.Engine.extend({
+    init: function (player) {
+      this._super(player)
+      this.img = null
+    },
 
-        play: function(params) {
-            //params = params || {};
-            //params.framing = 'multipart'; // using multipart/x-mixed-replace
-            S.log("MJPEG Native: Play", params);
+    play: function (params) {
+      // params = params || {};
+      // params.framing = 'multipart'; // using multipart/x-mixed-replace
+      S.log('symple:mjpeg:native: Play', params)
 
-            if (this.img)
-              throw 'Streaming already initialized'
+      if (this.img) { throw 'Streaming already initialized' }
 
-            this._super(params);
+      this._super(params)
 
-            // TODO: Some kind of connection timeout
+      // TODO: Some kind of connection timeout
 
-            //this.params = params;
-            //this.params.url = this.buildURL();
-            //if (!this.params.url)
-            //  throw 'Invalid streaming URL'
+      // this.params = params;
+      // this.params.url = this.buildURL();
+      // if (!this.params.url)
+      //  throw 'Invalid streaming URL'
 
-            var self = this;
-            var init = true;
-            this.img = new Image();
-            //this.img.style.width = '100%';  // constraints set on screen element
-            //this.img.style.height = '100%';
-            this.img.style.display = 'none';
-            this.img.onload = function() {
-                S.log("MJPEG Native: Success");
+      var self = this
+      var init = true
+      this.img = new Image()
+      // this.img.style.width = '100%';  // constraints set on screen element
+      // this.img.style.height = '100%';
+      this.img.style.display = 'none'
+      this.img.onload = function () {
+        S.log('symple:mjpeg:native: Success')
 
-                // Most browsers inclusing WebKit just call onload once.
-                if (init) {
-                    if (self.img)
-                        self.img.style.display = 'inline';
-                    self.setState('playing');
-                    init = false;
-                }
-
-                // Some browsers, like Firefox calls onload on each
-                // multipart segment, so we can display status.
-                else
-                    self.displayFPS();
-            }
-
-            // NOTE: This never fires in latest chrome
-            // when the remote side disconnects stream.
-            this.img.onerror = function() {
-                self.setError('Streaming connection failed.' +
-                    S.Media.BrowserCompatabilityMsg);
-            }
-            this.img.src = this.params.url; // + "&rand=" + Math.random();
-            this.player.screen.prepend(this.img);
-        },
-
-        stop: function() {
-            S.log("MJPEG Native: Stop");
-            this.cleanup();
-            this.setState('stopped');
-        },
-
-        cleanup: function() {
-            if (this.img) {
-                this.img.style.display = 'none';
-                this.img.src = "#"; // closes the socket in ff, but not webkit
-                this.img.onload = new Function;
-                this.img.onerror = new Function;
-                this.player.screen[0].removeChild(this.img);
-                this.img = null;
-            }
-        },
-
-        setError: function(error) {
-            S.log('Symple MJPEG Engine: Error:', error);
-            this.cleanup();
-            this.setState('error', error);
+        // Most browsers inclusing WebKit just call onload once.
+        if (init) {
+          if (self.img) { self.img.style.display = 'inline' }
+          self.setState('playing')
+          init = false
         }
-    });
 
+        // Some browsers, like Firefox calls onload on each
+        // multipart segment, so we can display status.
+        else { self.displayFPS() }
+      }
 
-    // -------------------------------------------------------------------------
-    // MJPEG WebSocket Engine
-    //
-    // Requires HyBi binary WebSocket support.
-    // Available in all the latest browsers:
-    // http://en.wikipedia.org/wiki/WebSocket
-    //
-    S.Media.registerEngine({
-        id: 'MJPEGWebSocket',
-        name: 'MJPEG WebSocket',
-        formats: 'MJPEG',
-        preference: 50,
-        support: (function() {
-            window.WebSocket = window.WebSocket || window.MozWebSocket;
-            window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
-            return !!(window.WebSocket && window.WebSocket.CLOSING === 2 && window.URL)
-        })()
-    });
+      // NOTE: This never fires in latest chrome
+      // when the remote side disconnects stream.
+      this.img.onerror = function () {
+        self.setError('Streaming connection failed.' + S.Media.BrowserCompatabilityMsg)
+      }
+      this.img.src = this.params.url // + "&rand=" + Math.random();
+      this.screen.appendChild(this.img)
+    },
 
-    S.Player.Engine.MJPEGWebSocket = S.Player.Engine.extend({
-        init: function(player) {
-            this._super(player);
-            this.socket = null;
-            this.img = null;
-        },
+    stop: function () {
+      S.log('symple:mjpeg:native: Stop')
+      this.cleanup()
+      this.setState('stopped')
+    },
 
-        play: function(params) {
-            if (this.active())
-              throw 'Streaming already active'
+    cleanup: function () {
+      if (this.img) {
+        this.img.style.display = 'none'
+        this.img.src = '#' // closes the socket in ff, but not webkit
+        this.img.onload = new Function()
+        this.img.onerror = new Function()
+        this.screen[0].removeChild(this.img)
+        this.img = null
+      }
+    },
 
-            this._super(params);
-            this.createImage();
+    setError: function (error) {
+      S.log('Symple MJPEG Engine: Error:', error)
+      this.cleanup()
+      this.setState('error', error)
+    }
+  })
 
-            var self = this, init = true;
+  // MJPEG WebSocket Engine
+  //
+  // Requires HyBi binary WebSocket support.
+  // Available in all the latest browsers:
+  // http://en.wikipedia.org/wiki/WebSocket
+  //
+  window.WebSocket = window.WebSocket || window.MozWebSocket
+  window.URL = window.URL || window.webkitURL || window.mozURL || window.msURL
 
-            S.log("MJPEG WebSocket: Play:", this.params);
-            this.socket = new WebSocket(this.normalizeURL(this.params.url));
+  S.PlayerFactory.register({
+    id: 'mjpeg:ws',
+    name: 'MJPEG WebSocket',
+    formats: 'MJPEG',
+    preference: 50,
+    support: (function () {
+      return !!(window.WebSocket && window.WebSocket.CLOSING === 2 && window.URL)
+    })()
+  })
 
-            this.socket.onopen = function () {
-                S.log("MJPEG WebSocket: Open");
-                //self.socket.send('Ping');
-            };
-            this.socket.onmessage = function (e) {
-                S.log("MJPEG WebSocket: Message: ", e);
+  S.Player.Engine.MJPEGWebSocket = S.Player.Engine.extend({
+    init: function (player) {
+      this._super(player)
+      this.socket = null
+      this.img = null
+    },
 
-                // http://www.adobe.com/devnet/html5/articles/real-time-data-exchange-in-html5-with-websockets.html
-                // http://stackoverflow.com/questions/15040126/receiving-websocket-arraybuffer-data-in-the-browser-receiving-string-instead
-                // http://stackoverflow.com/questions/9546437/how-send-arraybuffer-as-binary-via-websocket/11426037#11426037
-                if (!self.active()) {
-                    self.setError('Streaming failed');
-                    //self.socket.close();
-                }
+    play: function (params) {
+      if (this.active()) { throw 'Streaming already active' }
 
-                if (init) {
-                    self.setState('playing');
-                    init = false;
-                }
+      this._super(params)
+      this.createImage()
 
-                // TODO: Image content type
-                S.log("MJPEG WebSocket: Frame", self, e.data);
-                var blob = window.URL.createObjectURL(e.data);
-                self.img.onload = function() {
-                    window.URL.revokeObjectURL(blob);
-                };
-                self.img.src = blob;
-                self.displayFPS();
-            };
-            this.socket.onerror = function (error) {
-                // Invalid MJPEG streams will end up here
-                self.setError('Invalid MJPEG stream: ' + error + '.');
-            };
-        },
+      var self = this, init = true
 
-        stop: function() {
-            S.log("MJPEG WebSocket: Stop");
-            this.cleanup();
-            this.setState('stopped');
-        },
+      S.log('symple:mjpeg:ws: Play:', this.params)
+      this.socket = new WebSocket(this.normalizeURL(this.params.url))
 
-        active: function(params) {
-            return this.img !== null && this.socket !== null;
-        },
+      this.socket.onopen = function () {
+        S.log('symple:mjpeg:ws: Open')
+                // self.socket.send('Ping');
+      }
+      this.socket.onmessage = function (e) {
+        S.log('symple:mjpeg:ws: Message: ', e)
 
-        cleanup: function() {
-            S.log("MJPEG WebSocket: Cleanup");
-            if (this.img) {
-                this.img.style.display = 'none';
-                this.img.src = "#"; // XXX: Closes socket in ff, but not safari
-                this.img.onload = null;
-                this.img.onerror = null;
-                this.player.screen[0].removeChild(this.img);
-                this.img = null;
-            }
-            if (this.socket) {
-                S.log("MJPEG WebSocket: Cleanup: Socket: ", this.socket);
-
-                // BUG: Not closing in latest chrome,
-                this.socket.close()
-                this.socket = null;
-            }
-        },
-
-        createImage: function() {
-            if (!this.img) {
-                this.img = new Image();
-                this.img.style.width = '100%';
-                this.img.style.height = '100%';
-
-                // We will end up here if the MJPEG stream is invalid.
-                // NOTE: This never fires in latest chrome when the
-                // remote side disconnects stream.
-                var self = this;
-                this.img.onerror = function(e) {
-                    S.log("MJPEG WebSocket: Image load error: ", e);
-                    //self.setError(
-                    //  'Invalid MJPEG stream');
-                }
-                //this.player.screen[0].innerHTML = this.img;
-                this.player.screen.append(this.img);
-            }
-        },
-
-        normalizeURL: function(url) {
-          return url.replace(/^http/, 'ws');
-        },
-        //buildURL: function() {
-        //    return this._super().replace(/^http/, 'ws');
-        //},
-
-        setError: function(error) {
-            S.log('MJPEG WebSocket: Error:', error);
-            this.cleanup();
-            this.setState('error', error);
+        // http://www.adobe.com/devnet/html5/articles/real-time-data-exchange-in-html5-with-websockets.html
+        // http://stackoverflow.com/questions/15040126/receiving-websocket-arraybuffer-data-in-the-browser-receiving-string-instead
+        // http://stackoverflow.com/questions/9546437/how-send-arraybuffer-as-binary-via-websocket/11426037#11426037
+        if (!self.active()) {
+          self.setError('Streaming failed')
         }
-    });
 
-
-    // -------------------------------------------------------------------------
-    // Multipart HTTP Parser
-    //
-    S.MultipartParser = S.Class.extend({
-        init: function(engine) {
-            this.engine = engine;
-            this.contentType = null;
-            this.boundary = 0;
-            this.xhr.numParsed = 0;
-        },
-
-        process: function(buffer) {
-            var res = this.incrParse(buffer);
-            if (res[0] > 0) {
-                this.processPart(res[1]);
-                this.xhr.numParsed += res[0];
-                if (buffer.length > this.xhr.numParsed)
-                    this.processChunk();
-            }
-        },
-
-        processPart: function(part) {
-            //S.log('MultipartParser: processPart: ', this.boundary)
-            part = part.replace(this.boundary + "\r\n", '');
-            var lines = part.split("\r\n");
-            var headers = {};
-            while(/^[-a-z0-9]+:/i.test(lines[0])) {
-                var header = lines.shift().split(':');
-                headers[header[0]] = header[1].trim();
-                if (!this.contentType) {
-                    if (header[0] == 'Content-Type')
-                        this.contentType = header[1].trim();
-                }
-            }
-            var payload = lines.join("\r\n");
-            this.draw(payload);
-        },
-
-        incrParse: function(buffer) {
-            //S.log('MultipartParser: incrParse: ', this.boundary)
-            if (buffer.length < 1) return [-1];
-            var start = buffer.indexOf(this.boundary);
-            if (start == -1) return [-1];
-            var end = buffer.indexOf(this.boundary, start + this.boundary.length);
-            // SUCCESS
-            if (start > -1 && end > -1) {
-                var part = buffer.substring(start, end);
-                // end != part.length in wrong response, ignore it
-                return [end, part];
-            }
-            // INCOMPLETE
-            return [-1];
+        if (init) {
+          self.setState('playing')
+          init = false
         }
-    });
 
-
-    // -------------------------------------------------------------------------
-    // HTTP Chunked Parser
-    //
-    S.ChunkedParser = S.Class.extend({
-        init: function(engine) {
-            this.engine = engine;
-        },
-
-        process: function(frame) {
-            var start,
-                nread = 0,
-                pos = frame.indexOf("/9j/");
-            while (pos > -1) {
-                start = pos;
-                pos = frame.indexOf("/9j/", pos + 4);
-                if (pos > -1) {
-                    var image = frame.substr(start, pos);
-                    this.engine.draw(image);
-                    nread += image.length;
-                }
-            }
-            return nread;
-
-            /*
-            // Image start
-            if (frame.indexOf("/9j/") == 0) {
-                S.log('Symple ChunkedParser: Got Image Start')
-
-                // Draw the current frame
-                if (this.currentFrame.length) {
-                    this.engine.draw(this.currentFrame);
-                    this.currentFrame = '';
-                }
-            }
-            else
-                S.log('Symple ChunkedParser: Partial Packet')
-
-            // Append data to current frame
-            this.currentFrame += frame;
-            return frame.length;
-            */
+        // TODO: Image content type
+        S.log('symple:mjpeg:ws: Frame', self, e.data)
+        var blob = window.URL.createObjectURL(e.data)
+        self.img.onload = function () {
+          window.URL.revokeObjectURL(blob)
         }
-    });
+        self.img.src = blob
+        self.displayFPS()
+      }
+      this.socket.onerror = function (error) {
+        // Invalid MJPEG streams will end up here
+        self.setError('Invalid MJPEG stream: ' + error + '.')
+      }
+    },
 
+    stop: function () {
+      S.log('symple:mjpeg:ws: Stop')
+      this.cleanup()
+      this.setState('stopped')
+    },
 
-    // -------------------------------------------------------------------------
-    // MXHR Base64 MJPEG Engine
-    //
-    // - Multipart data must be base64 encoded to use this engine.
-    // - Base64 encoded data is 37% larger than raw data.
-    // - Provides last resort playback in browsers that don't support MJPEG natively.
-    // - Chrome doesn't support multipart/x-mixed-replace over XMLHttpRequest,
-    //   which is required for some older browsers to trigger readyState == 3.
-    //   Server side for Chrome should just push data to the client (HTTP Streaming).
-    // - Safari WebKit, and Firefox (tested on 15.0.1) parses and removes chunk
-    //   headers and boundaries for us.
-    // - The server must use Transfer-Encoding: chunked. Plain old HTTP streaming is
-    //   not sufficient as packets may be modified by the client.
-    //
-    S.Media.registerEngine({
-        id: 'MJPEGBase64MXHR',
-        name: 'MJPEG Base64 MXHR',
-        formats: 'MJPEG',
-        defaults: {
-            framing: 'chunked',
-            encoding: 'Base64'
-        },
-        preference: 30,
-        support: (function() {
-            return 'XMLHttpRequest' in window;
-        })()
-    });
+    active: function (params) {
+      return this.img !== null && this.socket !== null
+    },
 
+    cleanup: function () {
+      S.log('symple:mjpeg:ws: Cleanup')
+      if (this.img) {
+        this.img.style.display = 'none'
+        this.img.src = '#' // XXX: Closes socket in ff, but not safari
+        this.img.onload = null
+        this.img.onerror = null
+        this.screen[0].removeChild(this.img)
+        this.img = null
+      }
+      if (this.socket) {
+        S.log('symple:mjpeg:ws: Cleanup: Socket: ', this.socket)
 
-    S.Player.Engine.MJPEGBase64MXHR = S.Player.Engine.extend({
-        init: function(player) {
-            this._super(player);
-            this.xhrID = 0;
-            this.xhrConn = null;
-            this.contentType = null;
-            this.img = null;
-            this.errors = 0;
-        },
+        // BUG: Not closing in latest chrome,
+        this.socket.close()
+        this.socket = null
+      }
+    },
 
-        play: function(params) {
-            if (this.xhr)
-                throw 'Streaming already initialized'
+    createImage: function () {
+      if (!this.img) {
+        this.img = new Image()
+        this.img.style.width = '100%'
+        this.img.style.height = '100%'
 
-            //params.framing = 'chunked';
-            //params.encoding = 'Base64';
-            this._super(params);
-
-            // TODO: Playback timer to set error if not playing after X
-
-            //S.log('MJPEGBase64MXHR: Play: ', this.params)
-            this.rotateConnection();
-        },
-
-        stop: function() {
-            if (this.xhrConn) {
-                this.freeXHR(this.xhrConn);
-                this.xhrConn = null;
-            }
-            //if (this.parser)
-            //    this.parser.flush();
-            this.freeImage(this.img);
-            this.img = null;
-            this.player.screen.html('');
-            this.setState('stopped');
-        },
-
-        rotateConnection: function() {
-            if (!this.params.url)
-                throw 'Invalid streaming URL'
-
-            this.xhrID++;
-            var self = this, xhr = this.createXHR();
-
-            //S.log('MJPEGBase64MXHR: Connecting:', this.xhrID)
-
-            xhr.xhrID = this.xhrID;
-            xhr.connecting = true;
-            xhr.cancelled = false;
-            xhr.onreadystatechange = function() {
-              // Send to onReadyState for parsing media
-              self.onReadyState.call(self, this);
-
-              // Connection management logic
-              if (this.readyState == 3) {
-
-                  // When the connection is ready we close the old one,
-                  // and set it as the new media connection.
-                  if (this.connecting) {
-                      this.connecting = false;
-                      //S.log('MJPEGBase64MXHR: Loaded:', this.xhrID)
-
-                      // Close the old connection (if any)
-                      if (self.xhrConn) {
-                          //S.log('MJPEGBase64MXHR: Freeing Old XHR:', self.xhrConn.xhrID)
-                          if (self.xhrConn.xhrID == this.xhrID)
-                              throw 'XHR ID mismatch'
-                          if (self.xhrConn === this)
-                              throw 'XHR instance mismatch'
-
-                          // Assign a null callback so we don't receive
-                          // readyState 4 for the cancelled connection.
-                          self.xhrConn.onreadystatechange = new Function;
-                          self.xhrConn.abort();
-                          delete self.xhrConn.responseText;
-                          self.xhrConn = null;
-                      }
-
-                      // Set the new media connection
-                      self.xhrConn = this;
-                  }
-
-                  // Keep memory usage down by recreateing the connection
-                  // when the XHR responseText buffer gets too large.
-                  // Works a treat in Chrome (27.0.1453.110).
-                  else if (this.cancelled === false &&
-                      this.responseText &&
-                      this.responseText.length > (1048576 * 2)) {
-                      this.cancelled = true;
-                      //S.log('MJPEGBase64MXHR: Switching Connection:', this.xhrID, this.responseText.length)
-                      self.rotateConnection();
-                  }
-              }
-            }
-            xhr.open('GET', this.params.url, true);
-            xhr.send(null);
-            xhr = null; // Dereference to ensure destruction
-        },
-
-        draw: function(frame) {
-            //S.log('MJPEGBase64MXHR: Draw:', this.contentType, frame.length) //, frame
-
-            if (!this.img) {
-                this.img = this.createImage()
-                this.player.screen.prepend(this.img);
-            }
-
-            this.img.src = 'data:' + this.contentType + ';base64,' + frame;
-            this.displayFPS();
-        },
-
-        createXHR: function() {
-            // These versions of XHR are known to work with MXHR
-            try { return new ActiveXObject('MSXML2.XMLHTTP.6.0'); } catch(nope) {
-                try { return new ActiveXObject('MSXML3.XMLHTTP'); } catch(nuhuh) {
-                    try { return new XMLHttpRequest(); } catch(noway) {
-                        throw new Error('Could not find supported version of XMLHttpRequest.');
-                    }
-                }
-            }
-        },
-
-        freeXHR: function(xhr) {
-            //S.log('MJPEGBase64MXHR: Freeing XHR:', xhr.xhrID)
-            xhr.canceled = true;
-            xhr.abort();
-            xhr.onreadystatechange = new Function;
-            delete xhr.responseText;
-            xhr = null;
-        },
-
-        createImage: function(img) {
-            var img = new Image();
-            img.self = this;
-            img.style.zIndex = -1; // hide until loaded
-            img.onload = function() {
-                S.log('MJPEGBase64MXHR: Onload');
-                if (this.self.player.state == 'loading')
-                    this.self.setState('playing');
-                this.self.errors = 0; // reset error count
-            }
-            img.onerror = function() {
-                S.log('MJPEGBase64MXHR: Bad frame: ', frame.length,
-                    frame.substr(0, 50),
-                    frame.substr(frame.length - 50, frame.length)); // for debuggering
-
-                // Set error state after 5 consecutive failures
-                this.self.errors++;
-                if (this.self.errors == 5 &&
-                    this.self.player.state == 'loading')
-                    this.self.setError("Streaming ended. Invalid media format.");
-             }
-             return img;
-        },
-
-        freeImage: function(img) {
-            ////S.log('MJPEGBase64MXHR: Remove:', img.seq);
-            img.onload = new Function;
-            img.onerror = new Function;
-            if (img.parentNode)
-                img.parentNode.removeChild(img);
-            img = null;
-        },
-
-        onReadyState: function(xhr) {
-            ////S.log('MJPEGBase64MXHR: Ready State Change: ',  xhr.readyState, xhr.xhrID, xhr.numParsed)
-            if (xhr.readyState == 2) {
-
-                // If a multipart/x-mixed-replace header is received then we will
-                // be parsing the multipart response ourselves.
-                var contentTypeHeader = xhr.getResponseHeader("Content-Type");
-                //S.log('MJPEGBase64MXHR: Content Type Header: ', contentTypeHeader)
-                if (contentTypeHeader &&
-                    contentTypeHeader.indexOf("multipart/") != -1) {
-                    // TODO: Handle boundaries enclosed in commas
-                    this.parser = new S.MultipartParser(this);
-                    this.parser.boundary = '--' + contentTypeHeader.split('=')[1];
-                }
-
-                // If no multipart header was given we are using HTTP streaming
-                // or chunked encoding, our job just got a lot easier!
-                else {
-                    this.parser = new S.ChunkedParser(this);
-                }
-            }
-            else if (xhr.readyState == 3) {
-                //S.log('MJPEGBase64MXHR: Data: ', xhr.readyState)
-
-                if (isNaN(xhr.numParsed)) {
-                    xhr.numParsed = 0;
-
-                    // Set playing state when we get the initial packet
-                    //if (!this.player.playing) {
-                    //    this.setState('playing');
-                    //}
-                }
-
-                if (!this.contentType)
-                    this.contentType = xhr.getResponseHeader("Content-Type") ?
-                        xhr.getResponseHeader("Content-Type") : 'image/jpeg';
-
-                // TODO: Reset XHR every now and again to free responseText buffer
-                var length = xhr.responseText.length,
-                    frame = xhr.responseText.substring(xhr.numParsed, length);
-                if (frame.length)
-                    xhr.numParsed += this.parser.process(frame);
-            }
-            else if (xhr.readyState == 4) {
-                this.onComplete(xhr.status);
-
-                // Free the XHR: http://phptouch.com/2011/08/02/xmlhttprequest-leak-in-ie-78/
-                xhr.onreadystatechange = new Function; //empty function
-                xhr = null;
-            }
-        },
-
-        onComplete: function(status) {
-            //S.log('MJPEGBase64MXHR: Complete: ', status)
-            if (this.player.playing) {
-                stop();
-                this.player.displayMessage('info', 'Streaming ended: Connection closed by peer.');
-                return;
-            }
-
-            if (status == 200)
-                this.setError('Streaming connection failed: Not a multipart stream.' +
-                    S.Media.BrowserCompatabilityMsg);
-            else
-                this.setError('Streaming connection failed.' +
-                    S.Media.BrowserCompatabilityMsg);
+        // We will end up here if the MJPEG stream is invalid.
+        // NOTE: This never fires in latest chrome when the
+        // remote side disconnects stream.
+        var self = this
+        this.img.onerror = function (e) {
+          S.log('symple:mjpeg:ws: Image load error: ', e)
+          self.setError('Invalid MJPEG stream');
         }
-    });
+        this.screen.appendChild(this.img)
+      }
+    },
 
+    normalizeURL: function (url) {
+      return url.replace(/^http/, 'ws')
+    },
 
-    // -------------------------------------------------------------------------
-    // Pseudo MJPEG Engine
-    //
-    // - No memory leaks in Chrome (others untested)
-    // - One image per request
-    // - Can acheive seamless playback with reasonable framerates
-    //
-    S.Media.registerEngine({
-        id: 'PseudoMJPEG',
-        name: 'Pseudo MJPEG',
-        formats: 'MJPEG, JPEG',
-        preference: 0, // too crap to be auto chosen
-        support: (function() {
-            return true;
-        })()
-    });
+    // buildURL: function() {
+    //    return this._super().replace(/^http/, 'ws');
+    // },
 
-    S.Player.Engine.PseudoMJPEG = S.Player.Engine.extend({
-        init: function(player) {
-            this._super(player);
-            this.lastImage = null;
-            if (!this.player.options.threads)
-                this.player.options.threads = 2;
-
-            $.ajaxSetup({cache: false});
-        },
-
-        play: function(params) {
-            this._super(params);
-            S.log('PseudoMJPEG: Play: ', this.params)
-
-            // Load an image for each thread
-            for (var i = 0; i < this.player.options.threads; ++i)
-                this.loadNext();
-        },
-
-        stop: function() {
-            S.log('Symple PseudoMJPEG: stop');
-            this.player.playing = false;
-            if (this.lastImage) {
-                this.free(this.lastImage);
-                this.lastImage = null;
-            }
-            this.player.screen.html('');
-            this.setState('stopped');
-        },
-
-        loadNext: function() {
-            var self = this;
-            var img = new Image();
-            img.seq = this.seq;
-            img.self = this;
-            img.style.position = "absolute";
-            img.style.left = 0;
-            img.style.zIndex = -1; // hide until loaded
-            img.style.width = '100%';
-            img.style.height = '100%';
-            //img.width = this.player.options.screenWidth;
-            //img.height = this.player.options.screenHeight;
-            img.onload = function() {
-                S.log('Symple PseudoMJPEG: Onload');
-
-                // Set playing state when the first image loads
-                if (self.player.state == 'loading')
-                    self.setState('playing');
-
-                self.show.call(self, this);
-            }
-            S.log('Symple PseudoMJPEG: loadNext', this.seq );
-            if (this.seq < 5) {
-                img.onerror = function() {
-                    S.log('Symple PseudoMJPEG: OnError');
-                    self.free(img);
-                    self.setError('Streaming connection failed.');
-                }
-            }
-            //img.onload = this.onError;
-            img.src = this.params.url + "&seq=" + this.seq;
-            this.player.screen.prepend(img);
-        },
-
-        show: function(img) {
-             S.log('Symple PseudoMJPEG: Show');
-            if (!this.player.playing)
-                return;
-
-            // drop stale fames to avoid jerky playback
-            if (this.lastImage &&
-                this.lastImage.seq > img.seq) {
-                this.free(img);
-                S.log('Symple PseudoMJPEG: Dropping: ' + img.seq + ' < ' + this.lastImage.seq);
-                return;
-            }
-
-            // bring new image to front
-            img.style.zIndex = img.seq;
-
-            // free last image
-            if (this.lastImage)
-                this.free(this.lastImage);
-
-            this.lastImage = img;
-            this.displayFPS(); // required to increment seq
-            this.loadNext();
-        },
-
-        free: function(img) {
-            img.parentNode.removeChild(img);
-        },
-
-        setError: function(error) {
-            S.log('Symple PseudoMJPEG: Error:', error);
-            this.setState('error', error);
-        }
-    });
-
-})(window.Symple = window.Symple || {});
+    setError: function (error) {
+      S.log('symple:mjpeg:ws: Error:', error)
+      this.cleanup()
+      this.setState('error', error)
+    }
+  })
+})(window.Symple = window.Symple || {})
