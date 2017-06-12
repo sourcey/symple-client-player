@@ -271,7 +271,7 @@
   // Helpers
   //
 
-  S.Media.iceCandidateType = function (candidateSDP) {
+  S.iceCandidateType = function (candidateSDP) {
     if (candidateSDP.indexOf('typ relay') !== -1) { return 'turn' }
     if (candidateSDP.indexOf('typ srflx') !== -1) { return 'stun' }
     if (candidateSDP.indexOf('typ host') !== -1) { return 'host' }
