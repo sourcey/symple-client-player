@@ -37,7 +37,6 @@
       }
       if (!this.element) { throw 'Player element not found' }
 
-      console.log('ELEM', this.element, this.element.querySelectorAll, this.element.getElementsByClassName)
       this.screen = this.element.getElementsByClassName('symple-player-screen')[0]
       if (!this.screen) { throw 'Player screen element not found' }
 
