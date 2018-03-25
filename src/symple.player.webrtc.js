@@ -13,7 +13,7 @@
   window.URL = window.webkitURL || window.URL
   navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia
 
-  S.PlayerFactory.register({
+  S.Media.register({
     id: 'WebRTC',
     name: 'WebRTC Player',
     formats: 'VP9, VP4, H.264, Opus',

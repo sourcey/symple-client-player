@@ -163,7 +163,7 @@
   //
   // This factory is used to select and instantiate the best engine for the
   // current platform depending on supported formats and availability.
-  S.PlayerFactory = {
+  S.Media = {
     engines: {}, // Object containing references for candidate selection
 
     register: function (engine) {
@@ -220,6 +220,21 @@
       var engine = arr.length ? arr[0] : null
       S.log('symple:media: preferred engine', engine)
       return engine
+    },
+
+    // Build URLs for the Player
+    buildURL: function(params) {
+        var query = [], url, addr = params.address;
+        url = addr.scheme + '://' + addr.host + ':' + addr.port + (addr.uri ? addr.uri : '/');
+        for (var p in params) {
+            if (p == 'address')
+                continue;
+            query.push(encodeURIComponent(p) + "=" + encodeURIComponent(params[p]));
+        }
+        query.push('rand=' + Math.random());
+        url += '?';
+        url += query.join("&");
+        return url;
     }
   }
 })(window.Symple = window.Symple || {})

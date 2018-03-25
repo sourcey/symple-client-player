@@ -10,7 +10,7 @@
   window.URL = window.webkitURL || window.URL
   navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia
 
-  S.PlayerFactory.register({
+  S.Media.register({
     id: 'Webcam',
     name: 'Webcam Player',
     formats: 'JPEG, PNG',
@@ -20,7 +20,7 @@
     })()
   })
 
-  S.Player.Engine.Webcam = S.Player.Engine.extend({
+  S.Player.Webcam = S.Player.extend({
     init: function (element, options) {
       S.log('symple:webcam: Init')
 
