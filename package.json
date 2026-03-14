@@ -1,15 +1,24 @@
 {
   "name": "symple-client-player",
-  "version": "1.0.6",
-  "description": "Symple realtime media player",
+  "version": "2.0.0",
+  "description": "Symple realtime media player with WebRTC call signalling",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "dependencies": {
+    "symple-client": "file:../symple-client"
   },
   "devDependencies": {
-    "grunt": "^0.4.5",
-    "grunt-contrib-concat": "^0.1.3",
-    "grunt-contrib-cssmin": "^0.6.2",
-    "grunt-contrib-watch" : "^0.5.3",
-    "grunt-contrib-uglify" : "^0.2.0"
+    "vitest": "^3.0.0"
   },
   "repository": {
     "type": "git",
@@ -23,12 +32,13 @@
     "websocket",
     "streaming",
     "webrtc",
-    "chat"
+    "video",
+    "call"
   ],
   "author": "Kam Low <auscaster@gmail.com> (https://sourcey.com)",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/sourcey/symple-client-player/issues"
   },
-  "homepage": "http://sourcey.com/symple"
+  "homepage": "https://sourcey.com/symple"
 }
