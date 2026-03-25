@@ -69,6 +69,13 @@ export default class WebRTCPlayer extends Player {
     Symple.log('symple:webrtc: setup')
     this._createPeerConnection()
 
+    if (this.element.tagName?.toLowerCase() === 'video') {
+      this.video = this.element
+      this.video.autoplay = true
+      this.video.playsInline = true
+      return
+    }
+
     if (!this.video) {
       this.video = document.createElement('video')
       this.video.autoplay = true

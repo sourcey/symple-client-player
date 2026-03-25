@@ -25,14 +25,22 @@ export default class Player extends Emitter {
     this.element = element
     if (!this.element) throw new Error('Player element not found')
 
-    if (!this.element.classList.contains('symple-player')) {
-      this.element.innerHTML = this.options.template
+    const tagName = this.element.tagName?.toLowerCase()
+    this._directMediaElement = tagName === 'video' || tagName === 'audio'
+
+    if (this._directMediaElement) {
+      this.screen = this.element.parentElement || this.element
+      this.message = null
+    } else {
+      if (!this.element.classList.contains('symple-player')) {
+        this.element.innerHTML = this.options.template
+      }
+
+      this.screen = this.element.querySelector('.symple-player-screen')
+      if (!this.screen) throw new Error('Player screen element not found')
+
+      this.message = this.element.querySelector('.symple-player-message')
     }
-
-    this.screen = this.element.querySelector('.symple-player-screen')
-    if (!this.screen) throw new Error('Player screen element not found')
-
-    this.message = this.element.querySelector('.symple-player-message')
 
     this.state = null
     this.playing = false

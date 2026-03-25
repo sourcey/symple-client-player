@@ -242,4 +242,30 @@ describe('WebRTCPlayer', () => {
     expect(remoteEvents).toHaveLength(1)
     expect(player.state).toBe('playing')
   })
+
+  it('uses a direct video element as the playback target', () => {
+    const videoElement = {
+      tagName: 'VIDEO',
+      parentElement: {
+        appendChild () {}
+      },
+      classList: {
+        contains: () => false
+      },
+      addEventListener () {},
+      autoplay: false,
+      playsInline: false,
+      muted: false,
+      srcObject: null
+    }
+
+    const player = new WebRTCPlayer(videoElement, {
+      initiator: false,
+      localMedia: false
+    })
+
+    expect(player.video).toBe(videoElement)
+    expect(player.video.autoplay).toBe(true)
+    expect(player.video.playsInline).toBe(true)
+  })
 })
