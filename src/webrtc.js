@@ -57,7 +57,7 @@ export default class WebRTCPlayer extends Player {
 
     this.localStream = null
     this.remoteStream = null
-    this.pc = null
+    this.pc ??= null
 
     // Buffer ICE candidates that arrive before remote description is set.
     this._pendingCandidates = []

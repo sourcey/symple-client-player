@@ -1,4 +1,4 @@
-# Symple Client Player
+# Symple Player
 
 Media player and WebRTC call signalling for the [Symple](https://github.com/sourcey/symple-client) messaging protocol.
 
@@ -14,7 +14,7 @@ Media player and WebRTC call signalling for the [Symple](https://github.com/sour
 ## Install
 
 ```bash
-npm install symple-client-player symple-client
+npm install symple-player symple-client
 ```
 
 ## Usage
@@ -25,7 +25,7 @@ The `CallManager` handles the full call lifecycle over Symple messaging:
 
 ```javascript
 import SympleClient from 'symple-client'
-import { CallManager } from 'symple-client-player'
+import { CallManager } from 'symple-player'
 
 const client = new SympleClient({
   url: 'http://localhost:4500',
@@ -71,7 +71,7 @@ calls.hangup()
 Use `WebRTCPlayer` directly if you want to handle signalling yourself:
 
 ```javascript
-import { WebRTCPlayer } from 'symple-client-player'
+import { WebRTCPlayer } from 'symple-player'
 
 const player = new WebRTCPlayer(element, { initiator: true })
 
@@ -89,7 +89,7 @@ await player.play()
 ### Webcam
 
 ```javascript
-import { WebcamPlayer } from 'symple-client-player'
+import { WebcamPlayer } from 'symple-player'
 
 const webcam = new WebcamPlayer(element)
 await webcam.play({ audio: false, video: true })
@@ -126,7 +126,7 @@ import {
   CallSubtype,         // Call message subtypes
   CallState,           // Call state machine states
   iceCandidateType     // ICE candidate type helper
-} from 'symple-client-player'
+} from 'symple-player'
 ```
 
 ## Testing

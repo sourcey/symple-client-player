@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { iceCandidateType } from '../src/webrtc.js'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import WebRTCPlayer, { iceCandidateType } from '../src/webrtc.js'
+import { createMockElement } from './helpers.js'
 
 describe('iceCandidateType', () => {
   it('identifies TURN relay candidates', () => {
@@ -22,5 +23,107 @@ describe('iceCandidateType', () => {
   it('handles candidates with typ relay taking priority', () => {
     // relay should match first even if other keywords are present
     expect(iceCandidateType('typ relay typ host')).toBe('turn')
+  })
+})
+
+describe('WebRTCPlayer', () => {
+  let savedDocument
+  let savedNavigator
+  let savedRTCPeerConnection
+
+  beforeEach(() => {
+    savedDocument = globalThis.document
+    savedNavigator = globalThis.navigator
+    savedRTCPeerConnection = globalThis.RTCPeerConnection
+
+    globalThis.document = {
+      createElement: () => ({
+        autoplay: false,
+        playsInline: false,
+        muted: false,
+        srcObject: null
+      })
+    }
+
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: {
+        mediaDevices: {
+          getUserMedia: vi.fn(async () => ({
+            getTracks: () => [
+              {
+                kind: 'audio',
+                enabled: true,
+                stop () {}
+              }
+            ]
+          }))
+        }
+      }
+    })
+
+    globalThis.RTCPeerConnection = class {
+      constructor () {
+        this.tracks = []
+        this.localDescription = null
+        this.iceConnectionState = 'new'
+        this.connectionState = 'new'
+      }
+
+      addTrack (track, stream) {
+        this.tracks.push({ track, stream })
+      }
+
+      async createOffer () {
+        return { type: 'offer', sdp: 'v=0\r\nmock-offer' }
+      }
+
+      async setLocalDescription (desc) {
+        this.localDescription = desc
+      }
+
+      close () {}
+    }
+  })
+
+  afterEach(() => {
+    globalThis.document = savedDocument
+
+    if (typeof savedNavigator === 'undefined') {
+      delete globalThis.navigator
+    } else {
+      Object.defineProperty(globalThis, 'navigator', {
+        configurable: true,
+        value: savedNavigator
+      })
+    }
+
+    if (typeof savedRTCPeerConnection === 'undefined') {
+      delete globalThis.RTCPeerConnection
+    } else {
+      globalThis.RTCPeerConnection = savedRTCPeerConnection
+    }
+  })
+
+  it('retains the peer connection created during setup for outgoing play', async () => {
+    const element = createMockElement()
+    element._setupTemplate()
+
+    const player = new WebRTCPlayer(element, {
+      initiator: true,
+      localMedia: true,
+      mediaConstraints: {
+        audio: true,
+        video: false
+      }
+    })
+
+    expect(player.pc).toBeTruthy()
+
+    await player.play()
+
+    expect(player.pc).toBeTruthy()
+    expect(player.pc.tracks).toHaveLength(1)
+    expect(player.pc.localDescription.type).toBe('offer')
   })
 })

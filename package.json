@@ -1,5 +1,5 @@
 {
-  "name": "symple-client-player",
+  "name": "symple-player",
   "version": "4.0.0",
   "description": "Symple realtime media player with WebRTC call signalling",
   "type": "module",
@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sourcey/symple-client-player.git"
+    "url": "git+https://github.com/sourcey/symple-player.git"
   },
   "keywords": [
     "symple",
@@ -38,7 +38,7 @@
   "author": "Kam Low <auscaster@gmail.com> (https://sourcey.com)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/sourcey/symple-client-player/issues"
+    "url": "https://github.com/sourcey/symple-player/issues"
   },
   "homepage": "https://sourcey.com/code/symple"
 }
