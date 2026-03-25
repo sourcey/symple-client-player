@@ -45,7 +45,8 @@ describe('WebRTCPlayer', () => {
         autoplay: false,
         playsInline: false,
         muted: false,
-        srcObject: null
+        srcObject: null,
+        play: vi.fn(async () => {})
       })
     }
 
@@ -226,6 +227,7 @@ describe('WebRTCPlayer', () => {
       initiator: false,
       localMedia: false
     })
+    player.video.play = vi.fn(async () => {})
 
     const remoteEvents = []
     player.on('remotestream', (stream) => remoteEvents.push(stream))
@@ -238,6 +240,7 @@ describe('WebRTCPlayer', () => {
 
     expect(player.remoteStream).toBeTruthy()
     expect(player.video.srcObject).toBe(player.remoteStream)
+    expect(player.video.play).toHaveBeenCalledTimes(2)
     expect(player.remoteStream.getTracks()).toEqual([videoTrack, audioTrack])
     expect(remoteEvents).toHaveLength(1)
     expect(player.state).toBe('playing')
@@ -252,11 +255,13 @@ describe('WebRTCPlayer', () => {
       classList: {
         contains: () => false
       },
+      querySelector: () => null,
       addEventListener () {},
       autoplay: false,
       playsInline: false,
       muted: false,
-      srcObject: null
+      srcObject: null,
+      play: vi.fn(async () => {})
     }
 
     const player = new WebRTCPlayer(videoElement, {
@@ -267,5 +272,36 @@ describe('WebRTCPlayer', () => {
     expect(player.video).toBe(videoElement)
     expect(player.video.autoplay).toBe(true)
     expect(player.video.playsInline).toBe(true)
+  })
+
+  it('starts playback when a remote stream is attached to a direct video element', () => {
+    const videoElement = {
+      tagName: 'VIDEO',
+      parentElement: {
+        appendChild () {}
+      },
+      classList: {
+        contains: () => false
+      },
+      querySelector: () => null,
+      addEventListener () {},
+      autoplay: false,
+      playsInline: false,
+      muted: false,
+      srcObject: null,
+      play: vi.fn(async () => {})
+    }
+
+    const player = new WebRTCPlayer(videoElement, {
+      initiator: false,
+      localMedia: false
+    })
+
+    const videoTrack = { id: 'video-1', kind: 'video' }
+    player.pc.ontrack({ track: videoTrack, streams: [] })
+
+    expect(videoElement.srcObject).toBe(player.remoteStream)
+    expect(videoElement.play).toHaveBeenCalledTimes(1)
+    expect(player.state).toBe('playing')
   })
 })

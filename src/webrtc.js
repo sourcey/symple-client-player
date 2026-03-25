@@ -116,7 +116,7 @@ export default class WebRTCPlayer extends Player {
 
     // If we already have a remote stream, just re-attach it.
     if (this.remoteStream) {
-      this.video.srcObject = this.remoteStream
+      this._attachStream(this.remoteStream, false)
       this.setState('playing')
       return
     }
@@ -236,8 +236,7 @@ export default class WebRTCPlayer extends Player {
 
     // Show local preview (muted to prevent echo).
     if (this.options.initiator) {
-      this.video.srcObject = stream
-      this.video.muted = true
+      this._attachStream(stream, true)
     }
 
     this.emit('localstream', stream)
@@ -324,8 +323,7 @@ export default class WebRTCPlayer extends Player {
         this.emit('remotestream', stream)
       }
 
-      this.video.srcObject = this.remoteStream
-      this.video.muted = false
+      this._attachStream(this.remoteStream, false)
       this.setState('playing')
     }
 
@@ -366,6 +364,24 @@ export default class WebRTCPlayer extends Player {
       for (const track of stream.getTracks()) {
         track.stop()
       }
+    }
+  }
+
+  _attachStream (stream, muted) {
+    if (!this.video) {
+      return
+    }
+
+    if (this.video.srcObject !== stream) {
+      this.video.srcObject = stream
+    }
+    this.video.muted = muted
+
+    const playResult = this.video.play?.()
+    if (playResult && typeof playResult.catch === 'function') {
+      playResult.catch((err) => {
+        Symple.log('symple:webrtc: video play failed', err)
+      })
     }
   }
 }
