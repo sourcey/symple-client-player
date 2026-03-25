@@ -36,7 +36,8 @@ const calls = new CallManager(client, document.getElementById('video'), {
   rtcConfig: {
     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
   },
-  mediaConstraints: { audio: true, video: true }
+  mediaConstraints: { audio: true, video: true },
+  receiveMedia: true
 })
 
 // Make a call
@@ -64,6 +65,17 @@ calls.on('remotestream', (stream) => { /* remote video */ })
 
 // End a call
 calls.hangup()
+```
+
+To publish media without expecting a remote stream back, start the call in
+send-only mode:
+
+```javascript
+calls.call('media-server|peer-id', {
+  localMedia: true,
+  receiveMedia: false,
+  mediaConstraints: { audio: true, video: true }
+})
 ```
 
 ### WebRTC Player (direct)

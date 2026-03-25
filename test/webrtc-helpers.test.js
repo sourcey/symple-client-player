@@ -93,8 +93,12 @@ describe('WebRTCPlayer', () => {
         this.candidates.push(candidate)
       }
 
-      addTransceiver (kind, options) {
-        this.transceivers.push({ kind, options })
+      addTransceiver (trackOrKind, options) {
+        this.transceivers.push({
+          kind: typeof trackOrKind === 'string' ? trackOrKind : trackOrKind.kind,
+          track: typeof trackOrKind === 'string' ? null : trackOrKind,
+          options
+        })
       }
 
       close () {}
@@ -213,9 +217,36 @@ describe('WebRTCPlayer', () => {
 
     expect(player.pc.tracks).toHaveLength(0)
     expect(player.pc.transceivers).toEqual([
-      { kind: 'audio', options: { direction: 'recvonly' } },
-      { kind: 'video', options: { direction: 'recvonly' } }
+      { kind: 'audio', track: null, options: { direction: 'recvonly' } },
+      { kind: 'video', track: null, options: { direction: 'recvonly' } }
     ])
+    expect(player.pc.localDescription.type).toBe('offer')
+  })
+
+  it('creates sendonly transceivers for initiator publish-only calls', async () => {
+    const element = createMockElement()
+    element._setupTemplate()
+
+    const player = new WebRTCPlayer(element, {
+      initiator: true,
+      localMedia: true,
+      receiveMedia: false,
+      mediaConstraints: {
+        audio: true,
+        video: false
+      }
+    })
+
+    await player.play()
+
+    expect(player.pc.tracks).toHaveLength(0)
+    expect(player.pc.transceivers).toHaveLength(1)
+    expect(player.pc.transceivers[0]).toMatchObject({
+      kind: 'audio',
+      options: {
+        direction: 'sendonly'
+      }
+    })
     expect(player.pc.localDescription.type).toBe('offer')
   })
 

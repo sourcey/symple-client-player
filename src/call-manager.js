@@ -300,7 +300,8 @@ export default class CallManager extends Emitter {
       initiator,
       rtcConfig: this.options.rtcConfig,
       mediaConstraints: this._callOptions?.mediaConstraints || this.options.mediaConstraints,
-      localMedia: this._callOptions?.localMedia ?? (this.options.localMedia !== false)
+      localMedia: this._callOptions?.localMedia ?? (this.options.localMedia !== false),
+      receiveMedia: this._callOptions?.receiveMedia ?? (this.options.receiveMedia !== false)
     })
 
     // Wire player events to symple messaging.

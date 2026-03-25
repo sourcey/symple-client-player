@@ -143,6 +143,7 @@ describe('CallManager', () => {
     it('passes explicit outgoing call options to the player', async () => {
       cm.call(remotePeer, {
         localMedia: false,
+        receiveMedia: true,
         mediaConstraints: { audio: false, video: true }
       })
 
@@ -156,7 +157,29 @@ describe('CallManager', () => {
       await vi.waitFor(() => expect(cm.player).toBeDefined())
 
       expect(cm.player.options.localMedia).toBe(false)
+      expect(cm.player.options.receiveMedia).toBe(true)
       expect(cm.player.options.mediaConstraints).toEqual({ audio: false, video: true })
+    })
+
+    it('passes publish-only outgoing call options to the player', async () => {
+      cm.call(remotePeer, {
+        localMedia: true,
+        receiveMedia: false,
+        mediaConstraints: { audio: true, video: true }
+      })
+
+      client.receive({
+        type: 'message',
+        subtype: CallSubtype.ACCEPT,
+        from: remotePeer,
+        data: {}
+      })
+
+      await vi.waitFor(() => expect(cm.player).toBeDefined())
+
+      expect(cm.player.options.localMedia).toBe(true)
+      expect(cm.player.options.receiveMedia).toBe(false)
+      expect(cm.player.options.mediaConstraints).toEqual({ audio: true, video: true })
     })
 
     it('handles REJECT from remote: emits rejected, ends call', () => {

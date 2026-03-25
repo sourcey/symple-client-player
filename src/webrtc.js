@@ -50,7 +50,11 @@ export default class WebRTCPlayer extends Player {
 
       // Whether to acquire local media automatically on play().
       // Set false for receive-only mode.
-      localMedia: true
+      localMedia: true,
+
+      // Whether the peer expects to receive remote media on the call.
+      // Set false for send-only publishing/broadcast flows.
+      receiveMedia: true
     }
 
     super(element, { ...defaults, ...options })
@@ -229,9 +233,23 @@ export default class WebRTCPlayer extends Player {
     const stream = await navigator.mediaDevices.getUserMedia(this.options.mediaConstraints)
     this.localStream = stream
 
+    const receiveMedia = this.options.receiveMedia !== false
+
     // Add each track to the peer connection.
     for (const track of stream.getTracks()) {
-      this.pc.addTrack(track, stream)
+      if (receiveMedia) {
+        this.pc.addTrack(track, stream)
+        continue
+      }
+
+      if (typeof this.pc.addTransceiver !== 'function') {
+        throw new Error('RTCPeerConnection.addTransceiver is required for send-only calls')
+      }
+
+      this.pc.addTransceiver(track, {
+        direction: 'sendonly',
+        streams: [stream]
+      })
     }
 
     // Show local preview (muted to prevent echo).
