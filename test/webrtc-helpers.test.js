@@ -68,6 +68,7 @@ describe('WebRTCPlayer', () => {
       constructor () {
         this.tracks = []
         this.candidates = []
+        this.transceivers = []
         this.localDescription = null
         this.iceConnectionState = 'new'
         this.connectionState = 'new'
@@ -87,6 +88,10 @@ describe('WebRTCPlayer', () => {
 
       async addIceCandidate (candidate) {
         this.candidates.push(candidate)
+      }
+
+      addTransceiver (kind, options) {
+        this.transceivers.push({ kind, options })
       }
 
       close () {}
@@ -166,5 +171,28 @@ describe('WebRTCPlayer', () => {
     expect(player.pc.candidates[0].candidate).toBe(
       'candidate:1 1 UDP 2114977791 10.0.2.15 39682 typ host'
     )
+  })
+
+  it('creates recvonly transceivers for initiator receive-only calls', async () => {
+    const element = createMockElement()
+    element._setupTemplate()
+
+    const player = new WebRTCPlayer(element, {
+      initiator: true,
+      localMedia: false,
+      mediaConstraints: {
+        audio: true,
+        video: true
+      }
+    })
+
+    await player.play()
+
+    expect(player.pc.tracks).toHaveLength(0)
+    expect(player.pc.transceivers).toEqual([
+      { kind: 'audio', options: { direction: 'recvonly' } },
+      { kind: 'video', options: { direction: 'recvonly' } }
+    ])
+    expect(player.pc.localDescription.type).toBe('offer')
   })
 })

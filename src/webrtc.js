@@ -62,6 +62,7 @@ export default class WebRTCPlayer extends Player {
     // Buffer ICE candidates that arrive before remote description is set.
     this._pendingCandidates = []
     this._remoteDescriptionSet = false
+    this._recvOnlyReady = false
   }
 
   setup () {
@@ -98,6 +99,7 @@ export default class WebRTCPlayer extends Player {
 
     this._pendingCandidates = []
     this._remoteDescriptionSet = false
+    this._recvOnlyReady = false
 
     this.setState('stopped')
   }
@@ -114,9 +116,13 @@ export default class WebRTCPlayer extends Player {
 
     this.setState('loading')
 
-    if (this.options.initiator && this.options.localMedia) {
+    if (this.options.initiator) {
       try {
-        await this._acquireLocalMedia()
+        if (this.options.localMedia) {
+          await this._acquireLocalMedia()
+        } else {
+          this._prepareReceiveOnlyOffer()
+        }
         await this._createOffer()
       } catch (err) {
         this.setError('Failed to start call: ' + err.message)
@@ -228,6 +234,25 @@ export default class WebRTCPlayer extends Player {
     }
 
     this.emit('localstream', stream)
+  }
+
+  _prepareReceiveOnlyOffer () {
+    if (this._recvOnlyReady) {
+      return
+    }
+
+    const constraints = this.options.mediaConstraints || {}
+    const wantsAudio = constraints.audio !== false
+    const wantsVideo = constraints.video !== false
+
+    if (wantsAudio) {
+      this.pc.addTransceiver('audio', { direction: 'recvonly' })
+    }
+    if (wantsVideo) {
+      this.pc.addTransceiver('video', { direction: 'recvonly' })
+    }
+
+    this._recvOnlyReady = true
   }
 
   async _createOffer () {

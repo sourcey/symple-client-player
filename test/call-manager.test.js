@@ -16,9 +16,11 @@ vi.mock('../src/webrtc.js', () => {
     }
 
     async play () {
-      // Simulate the initiator flow: acquire media, create offer, emit sdp
-      this._localStream = { id: 'mock-local-stream' }
-      this.emit('localstream', this._localStream)
+      // Simulate the initiator flow: optionally acquire media, create offer, emit sdp
+      if (this.options.localMedia !== false) {
+        this._localStream = { id: 'mock-local-stream' }
+        this.emit('localstream', this._localStream)
+      }
       // Simulate offer creation
       const offer = { type: 'offer', sdp: 'v=0\r\nmock-offer-sdp' }
       this.emit('sdp', offer)
@@ -136,6 +138,25 @@ describe('CallManager', () => {
       expect(offerMsg.data.type).toBe('offer')
       expect(offerMsg.data.sdp).toContain('mock-offer-sdp')
       expect(offerMsg.to).toBe(remotePeer)
+    })
+
+    it('passes explicit outgoing call options to the player', async () => {
+      cm.call(remotePeer, {
+        localMedia: false,
+        mediaConstraints: { audio: false, video: true }
+      })
+
+      client.receive({
+        type: 'message',
+        subtype: CallSubtype.ACCEPT,
+        from: remotePeer,
+        data: {}
+      })
+
+      await vi.waitFor(() => expect(cm.player).toBeDefined())
+
+      expect(cm.player.options.localMedia).toBe(false)
+      expect(cm.player.options.mediaConstraints).toEqual({ audio: false, video: true })
     })
 
     it('handles REJECT from remote: emits rejected, ends call', () => {

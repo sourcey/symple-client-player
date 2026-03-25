@@ -79,18 +79,20 @@ export default class CallManager extends Emitter {
     this.player = null
     this.callState = CallState.IDLE
     this.remotePeerId = null
+    this._callOptions = null
 
     this._bindClientMessages()
   }
 
   // Start an outgoing call to a peer.
-  call (peerId) {
+  call (peerId, options = {}) {
     if (this.callState !== CallState.IDLE) {
       throw new Error('Cannot start call: already in state ' + this.callState)
     }
 
     Symple.log('symple:call: initiating call to', peerId)
     this.remotePeerId = peerId
+    this._callOptions = options
     this._setCallState(CallState.RINGING)
 
     this._send(CallSubtype.INIT, peerId)
@@ -297,8 +299,8 @@ export default class CallManager extends Emitter {
     this.player = new WebRTCPlayer(this.videoElement, {
       initiator,
       rtcConfig: this.options.rtcConfig,
-      mediaConstraints: this.options.mediaConstraints,
-      localMedia: this.options.localMedia !== false
+      mediaConstraints: this._callOptions?.mediaConstraints || this.options.mediaConstraints,
+      localMedia: this._callOptions?.localMedia ?? (this.options.localMedia !== false)
     })
 
     // Wire player events to symple messaging.
@@ -349,6 +351,7 @@ export default class CallManager extends Emitter {
     }
 
     this.remotePeerId = null
+    this._callOptions = null
     this._setCallState(CallState.ENDED)
     this.emit('ended', peerId, reason)
 
