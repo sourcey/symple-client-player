@@ -1,6 +1,6 @@
 {
   "name": "symple-player",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "description": "Symple realtime media player with WebRTC call signalling",
   "type": "module",
   "main": "./src/index.js",

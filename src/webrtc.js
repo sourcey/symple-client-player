@@ -192,15 +192,17 @@ export default class WebRTCPlayer extends Player {
     Symple.log('symple:webrtc: recv remote candidate', candidate)
     if (!this.pc) throw new Error('Peer connection not initialized')
 
+    const normalizedCandidate = normalizeRemoteCandidate(candidate)
+
     if (!this._remoteDescriptionSet) {
       // Buffer candidates until remote description is set.
       Symple.log('symple:webrtc: buffering candidate (no remote description yet)')
-      this._pendingCandidates.push(candidate)
+      this._pendingCandidates.push(normalizedCandidate)
       return
     }
 
     try {
-      await this.pc.addIceCandidate(new RTCIceCandidate(candidate))
+      await this.pc.addIceCandidate(new RTCIceCandidate(normalizedCandidate))
     } catch (err) {
       Symple.log('symple:webrtc: failed to add ice candidate', err)
     }
@@ -333,4 +335,20 @@ export function iceCandidateType (candidateSDP) {
   if (candidateSDP.indexOf('typ srflx') !== -1) return 'stun'
   if (candidateSDP.indexOf('typ host') !== -1) return 'host'
   return 'unknown'
+}
+
+function normalizeRemoteCandidate (candidate) {
+  if (!candidate || typeof candidate !== 'object') {
+    return candidate
+  }
+
+  if (typeof candidate.candidate !== 'string' ||
+      !candidate.candidate.startsWith('a=')) {
+    return candidate
+  }
+
+  return {
+    ...candidate,
+    candidate: candidate.candidate.slice(2)
+  }
 }

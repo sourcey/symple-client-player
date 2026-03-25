@@ -30,11 +30,13 @@ describe('WebRTCPlayer', () => {
   let savedDocument
   let savedNavigator
   let savedRTCPeerConnection
+  let savedRTCIceCandidate
 
   beforeEach(() => {
     savedDocument = globalThis.document
     savedNavigator = globalThis.navigator
     savedRTCPeerConnection = globalThis.RTCPeerConnection
+    savedRTCIceCandidate = globalThis.RTCIceCandidate
 
     globalThis.document = {
       createElement: () => ({
@@ -65,6 +67,7 @@ describe('WebRTCPlayer', () => {
     globalThis.RTCPeerConnection = class {
       constructor () {
         this.tracks = []
+        this.candidates = []
         this.localDescription = null
         this.iceConnectionState = 'new'
         this.connectionState = 'new'
@@ -82,7 +85,17 @@ describe('WebRTCPlayer', () => {
         this.localDescription = desc
       }
 
+      async addIceCandidate (candidate) {
+        this.candidates.push(candidate)
+      }
+
       close () {}
+    }
+
+    globalThis.RTCIceCandidate = class {
+      constructor (init) {
+        Object.assign(this, init)
+      }
     }
   })
 
@@ -102,6 +115,12 @@ describe('WebRTCPlayer', () => {
       delete globalThis.RTCPeerConnection
     } else {
       globalThis.RTCPeerConnection = savedRTCPeerConnection
+    }
+
+    if (typeof savedRTCIceCandidate === 'undefined') {
+      delete globalThis.RTCIceCandidate
+    } else {
+      globalThis.RTCIceCandidate = savedRTCIceCandidate
     }
   })
 
@@ -125,5 +144,27 @@ describe('WebRTCPlayer', () => {
     expect(player.pc).toBeTruthy()
     expect(player.pc.tracks).toHaveLength(1)
     expect(player.pc.localDescription.type).toBe('offer')
+  })
+
+  it('normalizes libdatachannel remote candidates before adding them', async () => {
+    const element = createMockElement()
+    element._setupTemplate()
+
+    const player = new WebRTCPlayer(element, {
+      initiator: false,
+      localMedia: false
+    })
+
+    player._remoteDescriptionSet = true
+
+    await player.recvRemoteCandidate({
+      candidate: 'a=candidate:1 1 UDP 2114977791 10.0.2.15 39682 typ host',
+      sdpMid: '0'
+    })
+
+    expect(player.pc.candidates).toHaveLength(1)
+    expect(player.pc.candidates[0].candidate).toBe(
+      'candidate:1 1 UDP 2114977791 10.0.2.15 39682 typ host'
+    )
   })
 })
