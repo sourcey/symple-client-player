@@ -31,12 +31,14 @@ describe('WebRTCPlayer', () => {
   let savedNavigator
   let savedRTCPeerConnection
   let savedRTCIceCandidate
+  let savedMediaStream
 
   beforeEach(() => {
     savedDocument = globalThis.document
     savedNavigator = globalThis.navigator
     savedRTCPeerConnection = globalThis.RTCPeerConnection
     savedRTCIceCandidate = globalThis.RTCIceCandidate
+    savedMediaStream = globalThis.MediaStream
 
     globalThis.document = {
       createElement: () => ({
@@ -102,6 +104,20 @@ describe('WebRTCPlayer', () => {
         Object.assign(this, init)
       }
     }
+
+    globalThis.MediaStream = class {
+      constructor () {
+        this._tracks = []
+      }
+
+      addTrack (track) {
+        this._tracks.push(track)
+      }
+
+      getTracks () {
+        return this._tracks
+      }
+    }
   })
 
   afterEach(() => {
@@ -126,6 +142,12 @@ describe('WebRTCPlayer', () => {
       delete globalThis.RTCIceCandidate
     } else {
       globalThis.RTCIceCandidate = savedRTCIceCandidate
+    }
+
+    if (typeof savedMediaStream === 'undefined') {
+      delete globalThis.MediaStream
+    } else {
+      globalThis.MediaStream = savedMediaStream
     }
   })
 
@@ -194,5 +216,30 @@ describe('WebRTCPlayer', () => {
       { kind: 'video', options: { direction: 'recvonly' } }
     ])
     expect(player.pc.localDescription.type).toBe('offer')
+  })
+
+  it('builds a remote stream from track-only ontrack events', () => {
+    const element = createMockElement()
+    element._setupTemplate()
+
+    const player = new WebRTCPlayer(element, {
+      initiator: false,
+      localMedia: false
+    })
+
+    const remoteEvents = []
+    player.on('remotestream', (stream) => remoteEvents.push(stream))
+
+    const videoTrack = { id: 'video-1', kind: 'video' }
+    const audioTrack = { id: 'audio-1', kind: 'audio' }
+
+    player.pc.ontrack({ track: videoTrack, streams: [] })
+    player.pc.ontrack({ track: audioTrack, streams: [] })
+
+    expect(player.remoteStream).toBeTruthy()
+    expect(player.video.srcObject).toBe(player.remoteStream)
+    expect(player.remoteStream.getTracks()).toEqual([videoTrack, audioTrack])
+    expect(remoteEvents).toHaveLength(1)
+    expect(player.state).toBe('playing')
   })
 })

@@ -302,15 +302,24 @@ export default class WebRTCPlayer extends Player {
     this.pc.ontrack = (event) => {
       Symple.log('symple:webrtc: remote track received', event.track.kind)
 
-      // Use the first stream associated with the track.
-      const stream = event.streams[0]
-      if (stream && stream !== this.remoteStream) {
+      // Browsers may deliver remote tracks without populating event.streams.
+      // Preserve a stable MediaStream so later audio/video tracks join the same sink.
+      const stream = event.streams?.[0] ?? this.remoteStream ?? new MediaStream()
+      if ((!event.streams || event.streams.length === 0) && event.track) {
+        const knownTrack = stream.getTracks().some((track) => track.id === event.track.id)
+        if (!knownTrack) {
+          stream.addTrack(event.track)
+        }
+      }
+
+      if (stream !== this.remoteStream) {
         this.remoteStream = stream
-        this.video.srcObject = stream
-        this.video.muted = false
-        this.setState('playing')
         this.emit('remotestream', stream)
       }
+
+      this.video.srcObject = this.remoteStream
+      this.video.muted = false
+      this.setState('playing')
     }
 
     // ICE connection state changes.
