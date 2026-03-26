@@ -1,6 +1,6 @@
 # Symple Player
 
-Media player and WebRTC call signalling for the [Symple](https://github.com/sourcey/symple-client) messaging protocol.
+Media player and WebRTC call signalling for the [Symple](https://github.com/nilstate/symple-client) messaging protocol.
 
 ## Features
 
@@ -149,13 +149,13 @@ npm test
 
 ## Symple Ecosystem
 
-- [symple-client](https://github.com/sourcey/symple-client) - JavaScript client
-- [symple-server](https://github.com/sourcey/symple-server) - Node.js server
-- [symple-client-ruby](https://github.com/sourcey/symple-client-ruby) - Ruby client
+- [symple-client](https://github.com/nilstate/symple-client) - JavaScript client
+- [symple-server](https://github.com/nilstate/symple-server) - Node.js server
+- [symple-client-ruby](https://github.com/nilstate/symple-client-ruby) - Ruby client
 
 ## More Information
 
-For more details, visit [sourcey.com/code/symple](https://sourcey.com/code/symple).
+For more details, visit [0state.com/symple](https://0state.com/symple).
 
 ## License
 

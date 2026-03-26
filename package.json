@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sourcey/symple-player.git"
+    "url": "git+https://github.com/nilstate/symple-player.git"
   },
   "keywords": [
     "symple",
@@ -35,10 +35,10 @@
     "video",
     "call"
   ],
-  "author": "Kam Low <auscaster@gmail.com> (https://sourcey.com)",
+  "author": "Kam Low <auscaster@gmail.com> (https://0state.com)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/sourcey/symple-player/issues"
+    "url": "https://github.com/nilstate/symple-player/issues"
   },
-  "homepage": "https://sourcey.com/code/symple"
+  "homepage": "https://0state.com/symple"
 }
